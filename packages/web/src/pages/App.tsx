@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import io from 'socket.io-client';
+import { manualTips } from '../data/manualTips';
 
 const socket = io('http://localhost:4000');
 
@@ -31,6 +32,7 @@ const StageCard: React.FC<{ name: string; status: StageStatus; onPause?: () => v
 
 const App: React.FC = () => {
   const [executions, setExecutions] = useState<Record<string, ExecutionState>>({});
+  const [showTips, setShowTips] = useState(false);
 
   useEffect(() => {
     socket.on('stage-status', ({ executionId, stage, status }: { executionId: string; stage: string; status: StageStatus; }) => {
@@ -71,6 +73,12 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen p-6 bg-black text-primary">
       <h1 className="text-2xl font-bold mb-6">Akshay's Framework Dashboard</h1>
+      <button
+        className="mb-4 px-3 py-1 bg-primary text-black rounded text-sm"
+        onClick={() => setShowTips(true)}
+      >
+        Manual Testing Guide
+      </button>
       <div className="space-y-6">
         {Object.values(executions).map((exec) => {
           const completedCount = Object.values(exec.stages).filter((s) => s === 'completed').length;
@@ -101,6 +109,21 @@ const App: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Manual Tips Modal */}
+      {showTips && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 max-w-2xl w-full max-h-full overflow-y-auto rounded p-6 relative">
+            <button
+              className="absolute top-2 right-2 text-white text-xl"
+              onClick={() => setShowTips(false)}
+            >
+              &times;
+            </button>
+            <div className="prose prose-invert text-primary" dangerouslySetInnerHTML={{ __html: markdownToHtml(manualTips) }} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -145,3 +168,15 @@ const ArtifactsList: React.FC<{ executionId: string }> = ({ executionId }) => {
     </div>
   );
 };
+
+// markdown to html quick converter (basic)
+function markdownToHtml(md: string) {
+  return md
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+    .replace(/`(.*?)`/gim, '<code>$1</code>')
+    .replace(/\n$/gim, '<br />');
+}
