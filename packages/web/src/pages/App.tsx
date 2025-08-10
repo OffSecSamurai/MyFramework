@@ -3,25 +3,62 @@ import io from 'socket.io-client';
 
 const socket = io('http://localhost:4000');
 
-interface ExecutionUpdate {
+type StageStatus = 'queued' | 'running' | 'completed' | 'failed';
+
+interface StageUpdate {
+  stage: string;
+  status: StageStatus;
+}
+
+interface ExecutionState {
   executionId: string;
-  stage?: string;
-  status?: string;
+  stages: Record<string, StageStatus>;
+  overall: StageStatus;
   error?: string;
 }
 
+const statusColor: Record<StageStatus, string> = {
+  queued: 'bg-gray-600',
+  running: 'bg-blue-600',
+  completed: 'bg-green-600',
+  failed: 'bg-red-600'
+};
+
+const StageCard: React.FC<{ name: string; status: StageStatus; onPause?: () => void; onStop?: () => void; }>
+  = ({ name, status }) => (
+    <div className={`p-2 rounded shadow-md text-sm ${statusColor[status]} text-white`}> {name} </div>
+  );
+
 const App: React.FC = () => {
-  const [updates, setUpdates] = useState<ExecutionUpdate[]>([]);
+  const [executions, setExecutions] = useState<Record<string, ExecutionState>>({});
 
   useEffect(() => {
-    socket.on('stage-status', (data: ExecutionUpdate) => {
-      setUpdates((prev) => [...prev, data]);
+    socket.on('stage-status', ({ executionId, stage, status }: { executionId: string; stage: string; status: StageStatus; }) => {
+      setExecutions((prev) => {
+        const exec = prev[executionId] || { executionId, stages: {}, overall: 'queued' as StageStatus };
+        exec.stages[stage] = status;
+        exec.overall = status === 'failed' ? 'failed' : (status === 'completed' && Object.values(exec.stages).every((s) => s === 'completed') ? 'completed' : 'running');
+        return { ...prev, [executionId]: { ...exec } };
+      });
     });
-    socket.on('execution-completed', (data: ExecutionUpdate) => {
-      setUpdates((prev) => [...prev, { ...data, status: 'completed' }]);
+
+    socket.on('execution-completed', ({ executionId }: { executionId: string; }) => {
+      setExecutions((prev) => {
+        const exec = prev[executionId];
+        if (!exec) return prev;
+        exec.overall = 'completed';
+        return { ...prev, [executionId]: { ...exec } };
+      });
     });
-    socket.on('execution-failed', (data: ExecutionUpdate) => {
-      setUpdates((prev) => [...prev, { ...data, status: 'failed' }]);
+
+    socket.on('execution-failed', ({ executionId, error }: { executionId: string; error?: string; }) => {
+      setExecutions((prev) => {
+        const exec = prev[executionId];
+        if (!exec) return prev;
+        exec.overall = 'failed';
+        exec.error = error;
+        return { ...prev, [executionId]: { ...exec } };
+      });
     });
 
     return () => {
@@ -32,11 +69,34 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen p-4 bg-black text-primary">
-      <h1 className="text-2xl font-bold mb-4">Akshay's Framework Dashboard</h1>
-      <pre className="text-xs bg-gray-900 p-2 rounded">
-        {JSON.stringify(updates, null, 2)}
-      </pre>
+    <div className="min-h-screen p-6 bg-black text-primary">
+      <h1 className="text-2xl font-bold mb-6">Akshay's Framework Dashboard</h1>
+      <div className="space-y-6">
+        {Object.values(executions).map((exec) => {
+          const completedCount = Object.values(exec.stages).filter((s) => s === 'completed').length;
+          const total = Object.keys(exec.stages).length || 1;
+          const percent = Math.round((completedCount / total) * 100);
+          return (
+            <div key={exec.executionId} className="border border-gray-700 rounded p-4">
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="font-semibold">Execution {exec.executionId.slice(0, 8)}</h2>
+                <span className={`px-2 py-1 text-xs rounded ${statusColor[exec.overall]} text-white`}>{exec.overall}</span>
+              </div>
+              {/* progress bar */}
+              <div className="w-full bg-gray-800 h-2 rounded mb-4">
+                <div className="h-2 rounded bg-primary" style={{ width: `${percent}%` }}></div>
+              </div>
+              {/* stage cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 mb-2">
+                {Object.entries(exec.stages).map(([stageName, st]) => (
+                  <StageCard key={stageName} name={stageName} status={st} />
+                ))}
+              </div>
+              {exec.error && <p className="text-red-500 text-xs">Error: {exec.error}</p>}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
