@@ -1,0 +1,21 @@
+{
+  "name": "@afw/api",
+  "version": "0.1.0",
+  "main": "dist/app.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn src/app.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "dotenv": "^16.4.0",
+    "cors": "^2.8.5",
+    "socket.io": "^4.7.2",
+    "bullmq": "^4.12.1",
+    "@prisma/client": "^5.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "ts-node-dev": "^2.0.0"
+  }
+}
