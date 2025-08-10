@@ -265,6 +265,37 @@ async function stageFuzzing(executionId: string) {
   done++; await updateProgress(executionId, totalSteps, done, 'finalize');
 }
 
+async function stageVulnScanning(executionId: string) {
+  const exec = await prisma.execution.findUnique({ where: { id: executionId } });
+  if (!exec) throw new Error('execution not found');
+  const baseDir = exec.storagePath;
+  const logFile = path.join(baseDir, 'stage5_vuln_scanning.log');
+
+  const liveUrls = path.join(baseDir, 'all_live_urls.txt');
+  const resolved = path.join(baseDir, 'resolved_hosts.txt');
+  const nucleiGeneral = path.join(baseDir, 'nuclei_general_scan.txt');
+  const nucleiTakeover = path.join(baseDir, 'nuclei_takeover_scan.txt');
+
+  const totalSteps = 3; let done = 0;
+  await updateProgress(executionId, totalSteps, done, 'nuclei-general');
+
+  // General Nuclei scan on live URLs (if present) else fallback to live_urls.txt
+  await runCmd('sh', ['-lc', `targets_file=${path.basename(liveUrls)}; [ ! -s "$targets_file" ] && targets_file=live_urls.txt; if [ -s "$targets_file" ]; then nuclei -l "$targets_file" -o ${path.basename(nucleiGeneral)} || true; fi`], baseDir, logFile);
+  if (await fs.pathExists(nucleiGeneral)) {
+    await prisma.artifact.create({ data: { executionId, name: 'nuclei_general_scan.txt', path: nucleiGeneral } });
+  }
+
+  done++; await updateProgress(executionId, totalSteps, done, 'nuclei-takeover');
+
+  // Subdomain takeover scan against resolved hosts
+  await runCmd('sh', ['-lc', `if [ -s ${path.basename(resolved)} ]; then nuclei -l ${path.basename(resolved)} -tags takeover -o ${path.basename(nucleiTakeover)} || true; fi`], baseDir, logFile);
+  if (await fs.pathExists(nucleiTakeover)) {
+    await prisma.artifact.create({ data: { executionId, name: 'nuclei_takeover_scan.txt', path: nucleiTakeover } });
+  }
+
+  done++; await updateProgress(executionId, totalSteps, done, 'finalize');
+}
+
 new Worker(
   'runs',
   async (job: Job) => {
@@ -279,6 +310,10 @@ new Worker(
     }
     if (name === 'stage4-fuzzing') {
       await stageFuzzing((job.data as any).executionId);
+      return;
+    }
+    if (name === 'stage5-vuln-scanning') {
+      await stageVulnScanning((job.data as any).executionId);
       return;
     }
     const { executionId } = job.data as { executionId: string };

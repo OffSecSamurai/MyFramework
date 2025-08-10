@@ -13,7 +13,7 @@ ENV PATH=$PATH:/usr/local/go/bin:/root/go/bin
 RUN wget -q https://go.dev/dl/go1.22.5.linux-amd64.tar.gz && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf go1.22.5.linux-amd64.tar.gz && rm go1.22.5.linux-amd64.tar.gz
 
-# Install recon tools (Stage 1, 2, 3)
+# Install recon tools (Stage 1, 2, 3, 5)
 RUN go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
     go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest && \
     go install github.com/projectdiscovery/httpx/cmd/httpx@latest && \
@@ -23,6 +23,7 @@ RUN go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && 
     go install github.com/lc/gau/v2/cmd/gau@latest && \
     go install github.com/tomnomnom/unfurl@latest && \
     go install github.com/projectdiscovery/katana/cmd/katana@latest && \
+    go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && \
     go install github.com/owasp-amass/amass/v4/...@latest || true && \
     go install github.com/projectdiscovery/chaos-client/cmd/chaos@latest || true
 

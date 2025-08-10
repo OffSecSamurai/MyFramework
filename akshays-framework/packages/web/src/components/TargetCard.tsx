@@ -65,6 +65,20 @@ export default function TargetCard({ apiUrl, target }: { apiUrl: string; target:
                     className="px-2 py-1 rounded bg-emerald-600 text-black hover:bg-emerald-500"
                   >Stage 4</button>
                 )}
+                {e.currentStage === 'FUZZING' && (
+                  <button
+                    onClick={async () => {
+                      const ok = confirm('Proceed to Stage 5: Vulnerability Scanning?');
+                      if (!ok) return;
+                      await fetch(`${apiUrl}/api/runs/${e.id}/advance-stage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ stage: 'VULN_SCANNING' })
+                      });
+                    }}
+                    className="px-2 py-1 rounded bg-emerald-600 text-black hover:bg-emerald-500"
+                  >Stage 5</button>
+                )}
                 <span className={`w-2.5 h-2.5 rounded-full ${statusColor(e.status)}`}></span>
               </div>
             </div>
