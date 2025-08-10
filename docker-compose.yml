@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  # Redis for job queue management
+  redis:
+    image: redis:7-alpine
+    container_name: akshays_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API Backend Service
+  api:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    container_name: akshays_api
+    ports:
+      - "${API_PORT:-3001}:3001"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - ./storage:/app/storage
+      - ./prisma:/app/prisma
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Web Frontend Service
+  web:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile
+    container_name: akshays_web
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:3001}
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Worker Service for tool execution
+  worker:
+    build:
+      context: .
+      dockerfile: packages/worker/Dockerfile
+    container_name: akshays_worker
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - REDIS_URL=${REDIS_URL}
+      - WORKER_THREADS=${WORKER_THREADS:-50}
+      - WORKER_TIMEOUT=${WORKER_TIMEOUT:-300000}
+      - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-5}
+      - EXECUTION_MODE=${EXECUTION_MODE:-docker}
+      - STORAGE_PATH=${STORAGE_PATH:-./storage}
+      - ARTIFACTS_PATH=${ARTIFACTS_PATH:-./storage/artifacts}
+      - CHAOS_API_KEY=${CHAOS_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - SHODAN_API_KEY=${SHODAN_API_KEY}
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - NO_PROXY=${NO_PROXY}
+    volumes:
+      - ./storage:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+
+  # Tool Containers for isolated execution
+  tools:
+    build:
+      context: packages/worker/tools
+      dockerfile: Dockerfile
+    container_name: akshays_tools
+    image: akshays/tools:latest
+    volumes:
+      - ./storage:/data
+    environment:
+      - CHAOS_API_KEY=${CHAOS_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+    restart: unless-stopped
+
+  # Database (SQLite in volume)
+  database:
+    image: alpine:latest
+    container_name: akshays_database
+    volumes:
+      - ./storage/database:/data
+    command: ["sh", "-c", "mkdir -p /data && touch /data/akshays_framework.db && tail -f /dev/null"]
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  default:
+    name: akshays_network
+    driver: bridge

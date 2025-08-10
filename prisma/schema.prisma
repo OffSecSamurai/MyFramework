@@ -1,0 +1,195 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Target {
+  id          String   @id @default(cuid())
+  domain      String   @unique
+  name        String?
+  description String?
+  scope       String?  // JSON string of scope configuration
+  status      TargetStatus @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  executions Execution[]
+  artifacts  Artifact[]
+
+  @@map("targets")
+}
+
+model Execution {
+  id          String   @id @default(cuid())
+  targetId    String
+  mode        ExecutionMode
+  tools       String   // JSON array of tool names
+  status      ExecutionStatus @default(PENDING)
+  progress    Int      @default(0) // 0-100
+  startedAt   DateTime?
+  completedAt DateTime?
+  error       String?
+  metadata    String?  // JSON string of execution metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  target      Target   @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+  artifacts   Artifact[]
+
+  @@map("executions")
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  executionId String
+  tool        String
+  status      TaskStatus @default(PENDING)
+  progress    Int      @default(0)
+  output      String?  // Tool output/result
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  metadata    String?  // JSON string of task metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  execution   Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@map("tasks")
+}
+
+model Artifact {
+  id          String   @id @default(cuid())
+  targetId    String?
+  executionId String?
+  name        String
+  type        ArtifactType
+  path        String
+  size        Int?
+  mimeType    String?
+  metadata    String?  // JSON string of artifact metadata
+  createdAt   DateTime @default(now())
+
+  // Relations
+  target      Target?   @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  execution   Execution? @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@map("artifacts")
+}
+
+model Vulnerability {
+  id          String   @id @default(cuid())
+  targetId    String
+  executionId String?
+  tool        String
+  type        String
+  severity    VulnerabilitySeverity
+  title       String
+  description String?
+  evidence    String?  // JSON string of vulnerability evidence
+  cve         String?
+  cwe         String?
+  cvss        Float?
+  status      VulnerabilityStatus @default(OPEN)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("vulnerabilities")
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  targetId    String
+  executionId String?
+  type        ReportType
+  title       String
+  content     String   // HTML/JSON content
+  format      ReportFormat
+  path        String?  // File path if saved
+  createdAt   DateTime @default(now())
+
+  @@map("reports")
+}
+
+// Enums
+enum TargetStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum ExecutionMode {
+  FULL
+  CUSTOM
+  SINGLE_TOOL
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+  PAUSED
+}
+
+enum TaskStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+  SKIPPED
+}
+
+enum ArtifactType {
+  SUBDOMAIN_LIST
+  LIVE_HOSTS
+  SCREENSHOT
+  VULNERABILITY_REPORT
+  LOG_FILE
+  CONFIG_FILE
+  OTHER
+}
+
+enum VulnerabilitySeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+enum VulnerabilityStatus {
+  OPEN
+  CONFIRMED
+  FALSE_POSITIVE
+  FIXED
+  WONT_FIX
+}
+
+enum ReportType {
+  EXECUTION_SUMMARY
+  VULNERABILITY_REPORT
+  ARTIFACT_SUMMARY
+  CUSTOM
+}
+
+enum ReportFormat {
+  HTML
+  JSON
+  CSV
+  PDF
+  MARKDOWN
+}
