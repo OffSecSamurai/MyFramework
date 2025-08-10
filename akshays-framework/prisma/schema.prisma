@@ -25,6 +25,10 @@ model Execution {
   threads      Int      @default(50)
   useNative    Boolean  @default(false)
   storagePath  String
+  // Progress tracking
+  stageTotalSteps     Int      @default(0)
+  stageCompletedSteps Int      @default(0)
+  currentStep         String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

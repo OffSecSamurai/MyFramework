@@ -1,9 +1,21 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import TargetCard from './TargetCard';
+import { io } from 'socket.io-client';
 
 export default function Dashboard({ apiUrl, targets, onRefresh }: { apiUrl: string; targets: any[]; onRefresh: () => void }) {
   const [target, setTarget] = useState('');
   const [mode, setMode] = useState<'FULL' | 'CUSTOM' | 'SINGLE'>('FULL');
+  const socket = useMemo(() => io(apiUrl, { path: '/socket.io' }), [apiUrl]);
+
+  useEffect(() => {
+    socket.on('progress', () => {
+      onRefresh();
+    });
+    return () => {
+      socket.off('progress');
+      socket.disconnect();
+    };
+  }, [socket]);
 
   async function startRun() {
     const res = await fetch(`${apiUrl}/api/runs`, {
