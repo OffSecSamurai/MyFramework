@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq';
-import { createClient } from 'redis';
+import IORedis from 'ioredis';
 import dotenv from 'dotenv';
 import execa from 'execa';
 import path from 'path';
@@ -9,11 +9,10 @@ import { PrismaClient } from '@prisma/client';
 
 dotenv.config();
 
-const redisConnection = createClient({
-  url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`
+const redisConnection = new IORedis({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: parseInt(process.env.REDIS_PORT || '6379', 10)
 });
-redisConnection.on('error', console.error);
-redisConnection.connect();
 
 const prisma = new PrismaClient();
 

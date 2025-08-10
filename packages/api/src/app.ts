@@ -4,7 +4,7 @@ import cors from 'cors';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import { Queue } from 'bullmq';
-import { createClient } from 'redis';
+import IORedis from 'ioredis';
 import { PrismaClient } from '@prisma/client';
 
 import targetsRouter from './routes/targets';
@@ -27,12 +27,11 @@ const io = new Server(server, {
 
 export const prisma = new PrismaClient();
 
-// Redis connection for BullMQ
-const connection = createClient({
-  url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`
+// Redis connection for BullMQ using ioredis
+const connection = new IORedis({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: parseInt(process.env.REDIS_PORT || '6379', 10)
 });
-connection.on('error', (err) => console.error('Redis Client Error', err));
-connection.connect();
 
 export const jobQueue = new Queue('afw-jobs', { connection });
 
