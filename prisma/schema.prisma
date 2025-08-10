@@ -1,0 +1,418 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// CORE MODELS
+// =============================================================================
+
+model Target {
+  id          String   @id @default(cuid())
+  domain      String   @unique
+  name        String?
+  description String?
+  scope       Json?    // Subdomain patterns, IP ranges, etc.
+  tags        String[] // e.g., ["web", "api", "mobile"]
+  priority    Priority @default(MEDIUM)
+  status      TargetStatus @default(ACTIVE)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastScanned DateTime?
+  
+  // Relationships
+  executions    Execution[]
+  subdomains    Subdomain[]
+  vulnerabilities Vulnerability[]
+  artifacts     Artifact[]
+  
+  @@map("targets")
+}
+
+model Execution {
+  id          String    @id @default(cuid())
+  targetId    String
+  mode        ExecutionMode
+  tools       String[]  // Array of tool names
+  config      Json?     // Execution configuration
+  status      ExecutionStatus @default(QUEUED)
+  progress    Int       @default(0) // 0-100
+  
+  // Timing
+  startedAt   DateTime?
+  completedAt DateTime?
+  duration    Int?      // seconds
+  
+  // Resources
+  threads     Int       @default(50)
+  memory      Int?      // MB
+  
+  // Output
+  output      String?   // Stdout/stderr
+  exitCode    Int?
+  errorMessage String?
+  
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relationships
+  target      Target    @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  jobs        Job[]
+  artifacts   Artifact[]
+  
+  @@map("executions")
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  executionId String
+  tool        String    // e.g., "subfinder", "nuclei"
+  command     String    // Full command executed
+  status      JobStatus @default(QUEUED)
+  progress    Int       @default(0)
+  
+  // Dependencies
+  dependencies String[] // Job IDs this job depends on
+  dependents   String[] // Job IDs that depend on this job
+  
+  // Timing
+  startedAt   DateTime?
+  completedAt DateTime?
+  duration    Int?      // seconds
+  
+  // Resources
+  workerId    String?
+  pid         Int?
+  memory      Int?      // MB used
+  
+  // Output
+  output      String?   // Tool output
+  exitCode    Int?
+  errorMessage String?
+  
+  // Retry logic
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relationships
+  execution   Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  artifacts   Artifact[]
+  
+  @@map("jobs")
+}
+
+// =============================================================================
+// RECONNAISSANCE MODELS
+// =============================================================================
+
+model Subdomain {
+  id        String   @id @default(cuid())
+  targetId  String
+  subdomain String
+  resolved  Boolean  @default(false)
+  ipAddress String?
+  cname     String?
+  
+  // HTTP Info
+  httpStatus Int?
+  httpTitle  String?
+  technology String[] // Tech stack detected
+  waf        String?  // WAF detected
+  
+  // Screenshots
+  screenshotPath String?
+  screenshotStatus String? // "pending", "completed", "failed"
+  
+  // Discovery source
+  source    String   // Tool that discovered this subdomain
+  confidence Float   @default(1.0) // 0.0 - 1.0
+  
+  // Status
+  status    SubdomainStatus @default(DISCOVERED)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastChecked DateTime?
+  
+  // Relationships
+  target    Target   @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  endpoints Endpoint[]
+  vulnerabilities Vulnerability[]
+  
+  @@unique([targetId, subdomain])
+  @@map("subdomains")
+}
+
+model Endpoint {
+  id           String   @id @default(cuid())
+  subdomainId  String
+  url          String
+  path         String
+  method       String   @default("GET")
+  parameters   Json?    // Query/body parameters
+  
+  // HTTP Response Info
+  status       Int?
+  contentType  String?
+  contentLength Int?
+  responseTime Int?     // milliseconds
+  
+  // Discovery info
+  source       String   // Tool/method that discovered this
+  depth        Int      @default(0) // Crawl depth
+  
+  // Analysis status
+  analyzed     Boolean  @default(false)
+  interesting  Boolean  @default(false) // Flagged as interesting
+  
+  // Timestamps
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastChecked  DateTime?
+  
+  // Relationships
+  subdomain    Subdomain @relation(fields: [subdomainId], references: [id], onDelete: Cascade)
+  vulnerabilities Vulnerability[]
+  
+  @@unique([subdomainId, url])
+  @@map("endpoints")
+}
+
+// =============================================================================
+// VULNERABILITY MODELS
+// =============================================================================
+
+model Vulnerability {
+  id          String    @id @default(cuid())
+  targetId    String
+  subdomainId String?
+  endpointId  String?
+  
+  // Vulnerability Info
+  name        String
+  description String?
+  severity    Severity
+  cvss        Float?
+  cve         String?
+  cwe         String?
+  category    String    // XSS, SQLi, LFI, etc.
+  
+  // Discovery Info
+  tool        String    // Tool that found this
+  confidence  Float     @default(1.0) // 0.0 - 1.0
+  
+  // Reproduction
+  request     String?   // HTTP request
+  response    String?   // HTTP response
+  payload     String?   // Exploit payload
+  poc         String?   // Proof of concept
+  
+  // Classification
+  falsePositive Boolean @default(false)
+  verified    Boolean   @default(false)
+  exploited   Boolean   @default(false)
+  
+  // Business Impact
+  impact      String?   // Business impact description
+  risk        Risk      @default(MEDIUM)
+  
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  verifiedAt  DateTime?
+  
+  // Relationships
+  target      Target    @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  subdomain   Subdomain? @relation(fields: [subdomainId], references: [id], onDelete: SetNull)
+  endpoint    Endpoint? @relation(fields: [endpointId], references: [id], onDelete: SetNull)
+  
+  @@map("vulnerabilities")
+}
+
+// =============================================================================
+// ARTIFACT MODELS
+// =============================================================================
+
+model Artifact {
+  id          String   @id @default(cuid())
+  targetId    String?
+  executionId String?
+  jobId       String?
+  
+  // File Info
+  filename    String
+  path        String   @unique
+  size        Int      // bytes
+  mimeType    String?
+  hash        String?  // SHA256
+  
+  // Classification
+  type        ArtifactType
+  category    String?  // "subdomains", "screenshots", "reports", etc.
+  description String?
+  
+  // Metadata
+  metadata    Json?    // Tool-specific metadata
+  public      Boolean  @default(false)
+  compressed  Boolean  @default(false)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  accessedAt  DateTime?
+  
+  // Relationships
+  target      Target?   @relation(fields: [targetId], references: [id], onDelete: SetNull)
+  execution   Execution? @relation(fields: [executionId], references: [id], onDelete: SetNull)
+  job         Job?      @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  
+  @@map("artifacts")
+}
+
+// =============================================================================
+// SYSTEM MODELS
+// =============================================================================
+
+model Worker {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  hostname    String
+  platform    String      // "docker", "native", "vm"
+  status      WorkerStatus @default(IDLE)
+  
+  // Capabilities
+  tools       String[]    // Supported tools
+  maxJobs     Int         @default(5)
+  currentJobs Int         @default(0)
+  
+  // Resources
+  cpu         Float?      // CPU usage %
+  memory      Int?        // MB used
+  maxMemory   Int?        // MB available
+  
+  // Health
+  lastHeartbeat DateTime?
+  version     String?
+  
+  // Timestamps
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  @@map("workers")
+}
+
+model Configuration {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  category  String   // "tools", "proxy", "notification", etc.
+  description String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("configurations")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TargetStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+  DELETED
+}
+
+enum ExecutionMode {
+  FULL
+  CUSTOM
+  SINGLE_TOOL
+}
+
+enum ExecutionStatus {
+  QUEUED
+  RUNNING
+  PAUSED
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+  RETRY
+}
+
+enum SubdomainStatus {
+  DISCOVERED
+  RESOLVED
+  ANALYZED
+  VULNERABLE
+  CLEAN
+}
+
+enum Severity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum Risk {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ArtifactType {
+  SUBDOMAIN_LIST
+  RESOLVED_HOSTS
+  LIVE_URLS
+  SCREENSHOT
+  NUCLEI_REPORT
+  NMAP_SCAN
+  DIRECTORY_FUZZ
+  VULNERABILITY_REPORT
+  RAW_OUTPUT
+  LOG_FILE
+  CONFIG_FILE
+  OTHER
+}
+
+enum WorkerStatus {
+  IDLE
+  BUSY
+  OFFLINE
+  ERROR
+}

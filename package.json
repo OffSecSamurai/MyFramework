@@ -1,0 +1,70 @@
+{
+  "name": "akshays-framework",
+  "version": "1.0.0",
+  "description": "Custom reconnaissance and vulnerability testing framework for bug bounty workflows",
+  "main": "index.js",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\" \"npm run dev:worker\"",
+    "dev:api": "npm run dev --workspace=packages/api",
+    "dev:web": "npm run dev --workspace=packages/web", 
+    "dev:worker": "npm run dev --workspace=packages/worker",
+    "build": "npm run build --workspaces",
+    "build:api": "npm run build --workspace=packages/api",
+    "build:web": "npm run build --workspace=packages/web",
+    "build:worker": "npm run build --workspace=packages/worker",
+    "start": "npm run start --workspace=packages/api",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "db:generate": "npx prisma generate",
+    "db:push": "npx prisma db push",
+    "db:migrate": "npx prisma migrate dev",
+    "db:studio": "npx prisma studio",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "setup": "npm install && npm run db:generate && npm run build",
+    "clean": "npm run clean --workspaces && rm -rf node_modules",
+    "postinstall": "npm run db:generate"
+  },
+  "keywords": [
+    "security",
+    "reconnaissance", 
+    "vulnerability-testing",
+    "bug-bounty",
+    "penetration-testing",
+    "automation",
+    "docker"
+  ],
+  "author": "Akshay",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.54.0",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.0",
+    "prisma": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/akshay/akshays-framework.git"
+  },
+  "bugs": {
+    "url": "https://github.com/akshay/akshays-framework/issues"
+  },
+  "homepage": "https://github.com/akshay/akshays-framework#readme"
+}

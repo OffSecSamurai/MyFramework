@@ -1,0 +1,285 @@
+version: '3.8'
+
+name: akshays-framework
+
+services:
+  # =============================================================================
+  # CORE SERVICES
+  # =============================================================================
+
+  # Redis - For BullMQ job queues and caching
+  redis:
+    image: redis:7-alpine
+    container_name: akshays-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - akshays-network
+
+  # Database - SQLite (mounted volume for persistence)
+  # Note: SQLite runs in the API container, this is just for data persistence
+  database-setup:
+    image: node:20-alpine
+    container_name: akshays-db-setup
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - db_data:/app/db
+    environment:
+      - DATABASE_URL=file:/app/db/dev.db
+    command: |
+      sh -c "
+        echo 'Setting up database...'
+        npm install --workspace=packages/api
+        npx prisma generate
+        npx prisma db push
+        echo 'Database setup complete!'
+      "
+    networks:
+      - akshays-network
+    profiles:
+      - setup
+
+  # =============================================================================
+  # APPLICATION SERVICES  
+  # =============================================================================
+
+  # API Server - Node.js Express backend
+  api:
+    build:
+      context: ./packages/api
+      dockerfile: Dockerfile
+    container_name: akshays-api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      # Database
+      - DATABASE_URL=file:/app/db/dev.db
+      - PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK=1
+      
+      # Server
+      - NODE_ENV=development
+      - API_PORT=3001
+      - API_HOST=0.0.0.0
+      - API_SECRET_KEY=dev-secret-key-change-in-production
+      - CORS_ORIGIN=http://localhost:3000
+      
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_URL=redis://redis:6379
+      
+      # Worker config
+      - WORKER_CONCURRENCY=5
+      - MAX_THREADS=50
+      - WORKER_TIMEOUT=3600000
+      
+      # Storage
+      - STORAGE_PATH=/app/storage
+      - ARTIFACTS_PATH=/app/storage/artifacts
+      - REPORTS_PATH=/app/storage/reports
+      - TEMP_PATH=/app/storage/temp
+      
+      # Tools
+      - USE_NATIVE_TOOLS=false
+      - DOCKER_FALLBACK=true
+      - TOOL_TIMEOUT=1800
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      
+      # Hardware optimization (Intel Core i5 12th Gen, 16GB DDR4)
+      - MAX_CPU_CORES=8
+      - MAX_MEMORY_MB=12288
+      - CONCURRENT_SCANS=3
+      - BATCH_SIZE=1000
+      - ENABLE_SSD_OPTIMIZATION=true
+      
+      # Session
+      - SESSION_SECRET=dev-session-secret-change-in-production
+      - SESSION_MAX_AGE=86400000
+      
+      # Logging
+      - LOG_LEVEL=info
+      - LOG_FILE=/app/logs/app.log
+    volumes:
+      - ./storage:/app/storage
+      - ./logs:/app/logs
+      - db_data:/app/db
+      - /var/run/docker.sock:/var/run/docker.sock  # For Docker tool execution
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - akshays-network
+
+  # Web Frontend - React + Vite (will be implemented in next phase)
+  web:
+    build:
+      context: ./packages/web
+      dockerfile: Dockerfile
+    container_name: akshays-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:3001
+      - VITE_WS_URL=ws://localhost:3001
+    volumes:
+      - ./packages/web:/app
+      - /app/node_modules
+    depends_on:
+      - api
+    networks:
+      - akshays-network
+    profiles:
+      - web
+
+  # Worker Service - Tool orchestration (will be implemented in next phase)
+  worker:
+    build:
+      context: ./packages/worker
+      dockerfile: Dockerfile
+    container_name: akshays-worker
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=file:/app/db/dev.db
+      - WORKER_CONCURRENCY=5
+      - MAX_THREADS=50
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ./storage:/app/storage
+      - db_data:/app/db
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks:
+      - akshays-network
+    profiles:
+      - worker
+
+  # =============================================================================
+  # DEVELOPMENT TOOLS
+  # =============================================================================
+
+  # Redis Commander - Redis GUI (development only)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: akshays-redis-gui
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    depends_on:
+      - redis
+    networks:
+      - akshays-network
+    profiles:
+      - dev
+
+  # Prisma Studio - Database GUI (development only)
+  prisma-studio:
+    image: node:20-alpine
+    container_name: akshays-prisma-studio
+    working_dir: /app
+    restart: unless-stopped
+    ports:
+      - "5555:5555"
+    environment:
+      - DATABASE_URL=file:/app/db/dev.db
+    volumes:
+      - ./:/app
+      - db_data:/app/db
+    command: |
+      sh -c "
+        npm install --workspace=packages/api
+        npx prisma studio --port 5555 --hostname 0.0.0.0
+      "
+    networks:
+      - akshays-network
+    profiles:
+      - dev
+
+  # =============================================================================
+  # MONITORING & OBSERVABILITY (Future Enhancement)
+  # =============================================================================
+
+  # Grafana - Metrics visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: akshays-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - akshays-network
+    profiles:
+      - monitoring
+
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: akshays-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - akshays-network
+    profiles:
+      - monitoring
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+
+networks:
+  akshays-network:
+    driver: bridge
+    name: akshays-framework-network
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+
+volumes:
+  db_data:
+    name: akshays-db-data
+    driver: local
+    
+  redis_data:
+    name: akshays-redis-data
+    driver: local
+    
+  grafana_data:
+    name: akshays-grafana-data
+    driver: local
+    
+  prometheus_data:
+    name: akshays-prometheus-data
+    driver: local
