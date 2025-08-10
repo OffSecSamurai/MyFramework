@@ -6,7 +6,9 @@ services:
       - "6379:6379"
 
   api:
-    build: ./packages/api
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
     container_name: akf-api
     env_file:
       - ./.env
@@ -25,7 +27,9 @@ services:
       - redis
 
   worker:
-    build: ./packages/worker
+    build:
+      context: .
+      dockerfile: packages/worker/Dockerfile
     container_name: akf-worker
     env_file:
       - ./.env
@@ -46,7 +50,9 @@ services:
       - api
 
   web:
-    build: ./packages/web
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile
     container_name: akf-web
     env_file:
       - ./.env

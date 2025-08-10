@@ -40,20 +40,26 @@ RUN pip3 install --no-cache-dir wafw00f
 RUN go install github.com/OJ/gobuster/v3@latest && \
     go install github.com/ffuf/ffuf/v2@latest
 
+# Install Node deps
+FROM base as deps
+WORKDIR /app
 COPY package.json package-lock.json* .npmrc* ./
-COPY packages/worker/package.json ./packages/worker/
 COPY prisma ./prisma
-RUN npm install --omit=dev --workspaces=false && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
+# Build worker
 FROM base as build
-COPY . .
-RUN npm install && npm run -w packages/worker build
+WORKDIR /app
+COPY packages/worker ./packages/worker
+COPY --from=deps /app/node_modules ./node_modules
+RUN cd packages/worker && npm install && npm run build
 
+# Final runtime
 FROM base
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app/packages/worker/dist ./dist
 COPY --from=build /app/packages/worker/package.json ./package.json
-COPY --from=build /app/prisma ./prisma
+COPY --from=deps /app/prisma ./prisma
 RUN npm i --omit=dev && npx prisma generate --schema=./prisma/schema.prisma
 CMD ["node", "dist/index.js"]
