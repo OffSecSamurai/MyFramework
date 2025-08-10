@@ -171,12 +171,71 @@ async function stageActiveRecon(executionId: string) {
   emitProgress(executionId, { stage: 'ACTIVE_RECON', status: 'COMPLETED' });
 }
 
+async function stageSpidering(executionId: string) {
+  const exec = await prisma.execution.findUnique({ where: { id: executionId } });
+  if (!exec) throw new Error('execution not found');
+  const baseDir = exec.storagePath;
+  const logFile = path.join(baseDir, 'stage3_spidering.log');
+
+  const liveUrls = path.join(baseDir, 'live_urls.txt');
+  const gauOut = path.join(baseDir, 'gau_urls.txt');
+  const waybackOut = path.join(baseDir, 'wayback_urls.txt');
+  const katanaOut = path.join(baseDir, 'katana_urls.txt');
+  const allDiscovered = path.join(baseDir, 'all_discovered_urls.txt');
+  const allLive = path.join(baseDir, 'all_live_urls.txt');
+  const nonLive = path.join(baseDir, 'non_live_urls.txt');
+  const allJs = path.join(baseDir, 'all_js_files.txt');
+  const allHosts = path.join(baseDir, 'all_hosts.txt');
+  const urlsWithParams = path.join(baseDir, 'urls_with_params.txt');
+  const interestingParams = path.join(baseDir, 'urls_interesting_params.txt');
+
+  const totalSteps = 7; let done = 0;
+  await updateProgress(executionId, totalSteps, done, 'gau');
+
+  // gau and wayback
+  await runCmd('sh', ['-lc', `if [ -s ${path.basename(liveUrls)} ]; then cat ${path.basename(liveUrls)} | gau --subs --threads 10 --o ${path.basename(gauOut)} || true; fi`], baseDir, logFile);
+  done++; await updateProgress(executionId, totalSteps, done, 'waybackurls');
+  await runCmd('sh', ['-lc', `if [ -s ${path.basename(liveUrls)} ]; then cat ${path.basename(liveUrls)} | waybackurls > ${path.basename(waybackOut)} || true; fi`], baseDir, logFile);
+
+  // katana crawl depth 3
+  done++; await updateProgress(executionId, totalSteps, done, 'katana');
+  await runCmd('sh', ['-lc', `if [ -s ${path.basename(liveUrls)} ]; then katana -list ${path.basename(liveUrls)} -d 3 -silent -o ${path.basename(katanaOut)} || true; fi`], baseDir, logFile);
+
+  // combine and dedupe discovered URLs
+  done++; await updateProgress(executionId, totalSteps, done, 'combine-dedupe');
+  await runCmd('sh', ['-lc', `cat ${path.basename(gauOut)} ${path.basename(waybackOut)} ${path.basename(katanaOut)} 2>/dev/null | sed 's#^//#http://#' | sed 's#^/#http://#' | sed 's#:\([0-9]\+\)/#/#' | sort -u > ${path.basename(allDiscovered)} || true`], baseDir, logFile);
+  await prisma.artifact.create({ data: { executionId, name: 'all_discovered_urls.txt', path: allDiscovered } });
+
+  // hosts from discovered URLs; httpx check to filter live
+  done++; await updateProgress(executionId, totalSteps, done, 'hosts-live');
+  await runCmd('sh', ['-lc', `if [ -f ${path.basename(allDiscovered)} ]; then cat ${path.basename(allDiscovered)} | unfurl -u domains | sort -u > ${path.basename(allHosts)}; fi`], baseDir, logFile);
+  await runCmd('sh', ['-lc', `if [ -f ${path.basename(allHosts)} ]; then httpx -l ${path.basename(allHosts)} -silent -threads 100 -timeout 10 -status-code | awk '{print $1}' | sort -u > ${path.basename(allLive)}; fi`], baseDir, logFile);
+  await runCmd('sh', ['-lc', `if [ -f ${path.basename(allDiscovered)} ] && [ -f ${path.basename(allLive)} ]; then grep -Ff ${path.basename(allLive)} ${path.basename(allDiscovered)} > ${path.basename(allLive)}tmp && mv ${path.basename(allLive)}tmp ${path.basename(allLive)}; fi`], baseDir, logFile);
+  await runCmd('sh', ['-lc', `if [ -f ${path.basename(allDiscovered)} ] && [ -f ${path.basename(allLive)} ]; then comm -23 <(sort ${path.basename(allDiscovered)}) <(sort ${path.basename(allLive)}) > ${path.basename(nonLive)}; fi`], baseDir, logFile);
+
+  // JS files list and parameterized URLs
+  done++; await updateProgress(executionId, totalSteps, done, 'js-params');
+  await runCmd('sh', ['-lc', `if [ -f ${path.basename(allDiscovered)} ]; then grep -E '\\.js(\\?|$)' ${path.basename(allDiscovered)} | sort -u > ${path.basename(allJs)}; fi`], baseDir, logFile);
+  await runCmd('sh', ['-lc', `if [ -f ${path.basename(allDiscovered)} ]; then grep '\\?' ${path.basename(allDiscovered)} | sort -u > ${path.basename(urlsWithParams)}; fi`], baseDir, logFile);
+  await runCmd('sh', ['-lc', `if [ -f ${path.basename(allDiscovered)} ]; then grep -iE 'id=|user=|file=|path=|redirect=|url=|page=|view=|document=' ${path.basename(allDiscovered)} | sort -u > ${path.basename(interestingParams)}; fi`], baseDir, logFile);
+
+  await prisma.artifact.create({ data: { executionId, name: 'all_js_files.txt', path: allJs } });
+  await prisma.artifact.create({ data: { executionId, name: 'urls_with_params.txt', path: urlsWithParams } });
+  await prisma.artifact.create({ data: { executionId, name: 'urls_interesting_params.txt', path: interestingParams } });
+
+  done++; await updateProgress(executionId, totalSteps, done, 'finalize');
+}
+
 new Worker(
   'runs',
   async (job: Job) => {
     const name = job.name;
     if (name === 'stage2-active-recon') {
       await stageActiveRecon((job.data as any).executionId);
+      return;
+    }
+    if (name === 'stage3-spidering') {
+      await stageSpidering((job.data as any).executionId);
       return;
     }
     const { executionId } = job.data as { executionId: string };

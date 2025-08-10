@@ -37,6 +37,20 @@ export default function TargetCard({ apiUrl, target }: { apiUrl: string; target:
                     className="px-2 py-1 rounded bg-emerald-600 text-black hover:bg-emerald-500"
                   >Stage 2</button>
                 )}
+                {e.currentStage === 'ACTIVE_RECON' && (
+                  <button
+                    onClick={async () => {
+                      const ok = confirm('Proceed to Stage 3: Spidering?');
+                      if (!ok) return;
+                      await fetch(`${apiUrl}/api/runs/${e.id}/advance-stage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ stage: 'SPIDERING' })
+                      });
+                    }}
+                    className="px-2 py-1 rounded bg-emerald-600 text-black hover:bg-emerald-500"
+                  >Stage 3</button>
+                )}
                 <span className={`w-2.5 h-2.5 rounded-full ${statusColor(e.status)}`}></span>
               </div>
             </div>
