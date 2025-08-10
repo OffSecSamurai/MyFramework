@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Target {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  scope       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  executions  Execution[]
+}
+
+model Execution {
+  id           String   @id @default(cuid())
+  targetId     String
+  mode         String   @default("FULL") // FULL | CUSTOM | SINGLE
+  status       String   @default("PENDING") // PENDING | RUNNING | PAUSED | COMPLETED | FAILED | ABORTED
+  currentStage String   @default("INITIAL_ASSESSMENT") // see stages
+  threads      Int      @default(50)
+  useNative    Boolean  @default(false)
+  storagePath  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  target       Target   @relation(fields: [targetId], references: [id])
+  jobs         Job[]
+  artifacts    Artifact[]
+  findings     Vulnerability[]
+}
+
+model Job {
+  id           String   @id @default(cuid())
+  executionId  String
+  tool         String
+  status       String   @default("PENDING") // PENDING | RUNNING | COMPLETED | FAILED | SKIPPED
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  logPath      String?
+  outputPath   String?
+
+  execution    Execution @relation(fields: [executionId], references: [id])
+}
+
+model Artifact {
+  id           String   @id @default(cuid())
+  executionId  String
+  name         String
+  path         String
+  mimeType     String?
+  createdAt    DateTime  @default(now())
+
+  execution    Execution @relation(fields: [executionId], references: [id])
+}
+
+model Vulnerability {
+  id           String   @id @default(cuid())
+  executionId  String
+  title        String
+  severity     String   @default("INFO") // CRITICAL | HIGH | MEDIUM | LOW | INFO
+  source       String
+  details      String?
+  createdAt    DateTime @default(now())
+
+  execution    Execution @relation(fields: [executionId], references: [id])
+}
