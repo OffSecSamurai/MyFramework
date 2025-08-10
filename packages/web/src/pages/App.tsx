@@ -92,6 +92,10 @@ const App: React.FC = () => {
                   <StageCard key={stageName} name={stageName} status={st} />
                 ))}
               </div>
+              {/* artifacts */}
+              {exec.overall === 'completed' && (
+                <ArtifactsList executionId={exec.executionId} />
+              )}
               {exec.error && <p className="text-red-500 text-xs">Error: {exec.error}</p>}
             </div>
           );
@@ -102,3 +106,42 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+// ArtifactsList component
+const ArtifactsList: React.FC<{ executionId: string }> = ({ executionId }) => {
+  const [artifacts, setArtifacts] = React.useState<Array<{ id: string; type: string }>>([]);
+  const [open, setOpen] = React.useState(false);
+
+  const toggle = async () => {
+    if (!open && artifacts.length === 0) {
+      const res = await fetch(`http://localhost:4000/executions/${executionId}/artifacts`);
+      const data = await res.json();
+      setArtifacts(data);
+    }
+    setOpen(!open);
+  };
+
+  return (
+    <div className="mt-2">
+      <button className="text-xs underline" onClick={toggle}>
+        {open ? 'Hide' : 'Show'} artifacts
+      </button>
+      {open && (
+        <ul className="mt-1 text-xs space-y-1 list-disc list-inside">
+          {artifacts.map((a) => (
+            <li key={a.id}>
+              <a
+                href={`http://localhost:4000/artifacts/${a.id}/download`}
+                className="text-primary hover:underline"
+                target="_blank"
+                rel="noreferrer"
+              >
+                {a.type}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};

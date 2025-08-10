@@ -9,6 +9,8 @@ import { PrismaClient } from '@prisma/client';
 
 import targetsRouter from './routes/targets';
 import runsRouter from './routes/runs';
+import executionsRouter from './routes/executions';
+import artifactsRouter from './routes/artifacts';
 
 dotenv.config();
 
@@ -42,6 +44,8 @@ io.on('connection', (socket) => {
 
 app.use('/targets', targetsRouter);
 app.use('/runs', runsRouter);
+app.use('/executions', executionsRouter);
+app.use('/artifacts', artifactsRouter);
 
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {

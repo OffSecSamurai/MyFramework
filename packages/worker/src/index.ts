@@ -62,18 +62,22 @@ async function handlePassiveRecon(executionId: string, targetRoot: string, threa
     // Subfinder
     await sendStatus(executionId, 'subfinder', 'running');
     await execa('docker', ['run', '--rm', 'projectdiscovery/subfinder:latest', '-d', targetRoot, '-o', subDomainsPath]);
+    // Deduplicate
+    await dedupFile(subDomainsPath);
     await sendStatus(executionId, 'subfinder', 'completed');
 
     // dnsx
     const resolvedHostsPath = path.join(workDir, 'resolved_hosts.txt');
     await sendStatus(executionId, 'dnsx', 'running');
     await execa('docker', ['run', '--rm', 'projectdiscovery/dnsx:latest', '-l', subDomainsPath, '-o', resolvedHostsPath]);
+    await dedupFile(resolvedHostsPath);
     await sendStatus(executionId, 'dnsx', 'completed');
 
     // httpx
     const liveHostsPath = path.join(workDir, 'live_hosts.txt');
     await sendStatus(executionId, 'httpx', 'running');
     await execa('docker', ['run', '--rm', 'projectdiscovery/httpx:latest', '-l', resolvedHostsPath, '-threads', String(threads), '-o', liveHostsPath]);
+    await dedupFile(liveHostsPath);
     await sendStatus(executionId, 'httpx', 'completed');
 
     await prisma.artifact.createMany({
@@ -120,6 +124,7 @@ async function handleActiveRecon(executionId: string, targetRoot: string, liveHo
     const naabuPorts = path.join(workDir, 'naabu_all_ports.txt');
     await sendStatus(executionId, 'naabu', 'running');
     await execa('docker', ['run', '--rm', '-v', `${workDir}:/data`, 'projectdiscovery/naabu:latest', '-iL', '/data/live_hosts.txt', '-p', '-', '-rate', '1000', '-o', '/data/naabu_all_ports.txt']);
+    await dedupFile(naabuPorts);
     await sendStatus(executionId, 'naabu', 'completed');
 
     // nmap service scan
@@ -149,4 +154,14 @@ async function handleActiveRecon(executionId: string, targetRoot: string, liveHo
 
 async function sendStatus(executionId: string, stage: string, status: string) {
   socket.emit('stage-status', { executionId, stage, status });
+}
+
+async function dedupFile(filePath: string) {
+  try {
+    const contents = fs.readFileSync(filePath, 'utf-8');
+    const unique = Array.from(new Set(contents.split(/\r?\n/).filter(Boolean))).sort();
+    fs.writeFileSync(filePath, unique.join('\n'));
+  } catch (e) {
+    console.error('dedup error', filePath, e);
+  }
 }
