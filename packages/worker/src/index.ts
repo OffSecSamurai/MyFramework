@@ -32,7 +32,14 @@ interface ActiveReconJobData {
   threads: number;
 }
 
-type JobData = PassiveReconJobData | ActiveReconJobData;
+interface VulnDiscoveryJobData {
+  executionId: string;
+  targetRoot: string;
+  liveHostsPath: string;
+  threads: number;
+}
+
+type JobData = PassiveReconJobData | ActiveReconJobData | VulnDiscoveryJobData;
 
 const worker = new Worker<JobData>(
   'afw-jobs',
@@ -43,6 +50,9 @@ const worker = new Worker<JobData>(
     } else if (job.name === 'active-recon') {
       const { executionId, targetRoot, liveHostsPath, threads } = job.data as ActiveReconJobData;
       await handleActiveRecon(executionId, targetRoot, liveHostsPath, threads);
+    } else if (job.name === 'vuln-discovery') {
+      const { executionId, targetRoot, liveHostsPath, threads } = job.data as VulnDiscoveryJobData;
+      await handleVulnDiscovery(executionId, targetRoot, liveHostsPath, threads);
     }
   },
   { connection: redisConnection, concurrency: 1 }
@@ -139,6 +149,53 @@ async function handleActiveRecon(executionId: string, targetRoot: string, liveHo
         { executionId, path: wafReport, type: 'waf-report' },
         { executionId, path: naabuPorts, type: 'naabu-ports' },
         { executionId, path: nmapReport, type: 'nmap-report' }
+      ]
+    });
+
+    await prisma.execution.update({ where: { id: executionId }, data: { status: 'completed', finishedAt: new Date() } });
+    socket.emit('execution-completed', { executionId });
+  } catch (err: any) {
+    console.error(err);
+    await prisma.execution.update({ where: { id: executionId }, data: { status: 'failed', finishedAt: new Date() } });
+    socket.emit('execution-failed', { executionId, error: err.message || 'error' });
+    throw err;
+  }
+}
+
+async function handleVulnDiscovery(executionId: string, targetRoot: string, liveHostsPath: string, threads: number) {
+  await prisma.execution.update({ where: { id: executionId }, data: { status: 'running', startedAt: new Date() } });
+
+  const workDir = path.resolve(`/workspace/storage/${targetRoot}/${Date.now()}-vuln`);
+  fs.mkdirSync(workDir, { recursive: true });
+
+  try {
+    const localLiveHosts = path.join(workDir, 'live_hosts.txt');
+    fs.copyFileSync(liveHostsPath, localLiveHosts);
+
+    // dirsearch - brute force directories (save HTML and text)
+    const dirsearchReport = path.join(workDir, 'dirsearch_report.txt');
+    await sendStatus(executionId, 'dirsearch', 'running');
+    await execa('docker', ['run', '--rm', '-v', `${workDir}:/data`, 'maurossi/dirsearch', '-l', '/data/live_hosts.txt', '-e', '*', '-o', '/data/dirsearch_report.txt', '--plain-text-report']);
+    await sendStatus(executionId, 'dirsearch', 'completed');
+    await dedupFile(dirsearchReport);
+
+    // gf pattern hunt (within dirsearch report as demonstration)
+    const gfReport = path.join(workDir, 'gf_patterns.txt');
+    await sendStatus(executionId, 'gf', 'running');
+    await execa.command(`cat ${dirsearchReport} | docker run --rm -i trufflesecurity/gf redirect,xss,lfi -o ${gfReport}`);
+    await sendStatus(executionId, 'gf', 'completed');
+
+    // nuclei scan
+    const nucleiReport = path.join(workDir, 'nuclei_report.txt');
+    await sendStatus(executionId, 'nuclei', 'running');
+    await execa('docker', ['run', '--rm', '-v', `${workDir}:/data`, 'projectdiscovery/nuclei:latest', '-l', '/data/live_hosts.txt', '-o', '/data/nuclei_report.txt', '-nc', '-retries', '1']);
+    await sendStatus(executionId, 'nuclei', 'completed');
+
+    await prisma.artifact.createMany({
+      data: [
+        { executionId, path: dirsearchReport, type: 'dirsearch-report' },
+        { executionId, path: gfReport, type: 'gf-report' },
+        { executionId, path: nucleiReport, type: 'nuclei-report' }
       ]
     });
 
