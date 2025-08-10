@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import StageView from '../components/StageView';
 import Reports from './Reports';
+import Vulnerabilities from './Vulnerabilities';
 
 export default function ExecutionDetail({ apiUrl, executionId }: { apiUrl: string; executionId: string }) {
   const [exec, setExec] = useState<any>(null);
   const [log, setLog] = useState<string>('');
-  const [tab, setTab] = useState<'stage' | 'reports'>('stage');
+  const [tab, setTab] = useState<'stage' | 'reports' | 'vulns'>('stage');
 
   async function load() {
     const res = await fetch(`${apiUrl}/api/runs/${executionId}`);
@@ -41,6 +42,7 @@ export default function ExecutionDetail({ apiUrl, executionId }: { apiUrl: strin
       <div className="flex gap-2">
         <button onClick={() => setTab('stage')} className={`px-3 py-1 rounded ${tab==='stage'?'bg-emerald-600 text-black':'border border-emerald-700 text-emerald-300'}`}>Stage</button>
         <button onClick={() => setTab('reports')} className={`px-3 py-1 rounded ${tab==='reports'?'bg-emerald-600 text-black':'border border-emerald-700 text-emerald-300'}`}>Reports</button>
+        <button onClick={() => setTab('vulns')} className={`px-3 py-1 rounded ${tab==='vulns'?'bg-emerald-600 text-black':'border border-emerald-700 text-emerald-300'}`}>Vulnerabilities</button>
       </div>
       {tab === 'stage' && (
         <>
@@ -53,6 +55,9 @@ export default function ExecutionDetail({ apiUrl, executionId }: { apiUrl: strin
       )}
       {tab === 'reports' && (
         <Reports apiUrl={apiUrl} executionId={executionId} />
+      )}
+      {tab === 'vulns' && (
+        <Vulnerabilities apiUrl={apiUrl} executionId={executionId} />
       )}
     </div>
   );

@@ -37,8 +37,54 @@ export default function Reports({ apiUrl, executionId }: { apiUrl: string; execu
 
   const statuses = useMemo(() => Array.from(new Set(items.map((i) => i.status).filter(Boolean) as string[])), [items]);
 
+  const domainStats = useMemo(() => {
+    const domains = new Set<string>();
+    const statusCounts: Record<string, number> = {};
+    const techCounts: Record<string, number> = {};
+    for (const it of filtered) {
+      try { domains.add(new URL(it.url).hostname); } catch {}
+      if (it.status) statusCounts[it.status] = (statusCounts[it.status] || 0) + 1;
+      if (it.tech) {
+        (it.tech.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)).forEach((t) => {
+          techCounts[t] = (techCounts[t] || 0) + 1;
+        });
+      }
+    }
+    return { domainCount: domains.size, statusCounts, techCounts };
+  }, [filtered]);
+
+  function exportCsv() {
+    const header = ['url','status','tech'];
+    const rows = filtered.map((i) => [i.url, i.status || '', (i.tech || '').replace(/,/g, ';')]);
+    const csv = [header, ...rows].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'report.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   return (
     <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+        <div className="border border-emerald-800 rounded p-3">
+          <div className="text-emerald-300/70 text-sm">Unique Domains</div>
+          <div className="text-2xl text-emerald-400 font-semibold">{domainStats.domainCount}</div>
+        </div>
+        <div className="border border-emerald-800 rounded p-3">
+          <div className="text-emerald-300/70 text-sm">Total URLs</div>
+          <div className="text-2xl text-emerald-400 font-semibold">{filtered.length}</div>
+        </div>
+        <div className="border border-emerald-800 rounded p-3 col-span-2">
+          <div className="text-emerald-300/70 text-sm mb-1">Top Statuses</div>
+          <div className="flex gap-2 flex-wrap">
+            {Object.entries(domainStats.statusCounts).sort((a,b) => b[1]-a[1]).slice(0,6).map(([k,v]) => (
+              <div key={k} className="px-2 py-1 rounded bg-emerald-900/40 text-emerald-200 text-sm">{k}: {v}</div>
+            ))}
+          </div>
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         <div>
           <label className="block text-emerald-300/70 text-sm mb-1">Filter by Status</label>
@@ -50,6 +96,9 @@ export default function Reports({ apiUrl, executionId }: { apiUrl: string; execu
         <div>
           <label className="block text-emerald-300/70 text-sm mb-1">Filter by Tech</label>
           <input className="bg-black border border-emerald-700 rounded px-2 py-1 text-emerald-200 w-full" value={techFilter} onChange={(e) => setTechFilter(e.target.value)} placeholder="e.g., nginx, react" />
+        </div>
+        <div className="flex items-end justify-end">
+          <button onClick={exportCsv} className="px-3 py-2 rounded bg-emerald-600 text-black hover:bg-emerald-500">Export CSV</button>
         </div>
       </div>
       <div className="border border-emerald-900/50 rounded">
