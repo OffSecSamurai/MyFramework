@@ -3,8 +3,19 @@ set -euo pipefail
 
 echo "[+] Installing dependencies with pnpm"
 if ! command -v pnpm >/dev/null 2>&1; then
-  curl -fsSL https://get.pnpm.io/install.sh | sh -
+  echo "[+] pnpm not found, installing globally via npm"
+  npm install -g pnpm@10.14.0
 fi
+
+# ensure pnpm available in PATH for this script (global install path)
+export PATH="$PATH:$(npm root -g)/../bin"
+
+# create env file if missing
+if [ ! -f .env ]; then
+  echo "[+] Creating .env from example"
+  cp .env.example .env
+fi
+
 pnpm install
 
 # Generate Prisma client

@@ -9,6 +9,7 @@ Custom reconnaissance & vulnerability testing suite.
 git clone <repo-url> akshays-framework && cd akshays-framework
 
 # copy environment variables
+# if you didn’t run scripts/setup.sh, create env file first
 cp .env.example .env
 
 # build & start
