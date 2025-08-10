@@ -21,6 +21,12 @@ const io = new Server(server, {
   cors: { origin: '*' }
 });
 
+io.on('connection', (socket) => {
+  socket.on('progress', (payload) => {
+    io.emit('progress', payload);
+  });
+});
+
 app.set('io', io);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));

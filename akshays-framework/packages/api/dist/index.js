@@ -17,6 +17,11 @@ const io = new Server(server, {
     path: process.env.SOCKET_PATH || '/socket.io',
     cors: { origin: '*' }
 });
+io.on('connection', (socket) => {
+    socket.on('progress', (payload) => {
+        io.emit('progress', payload);
+    });
+});
 app.set('io', io);
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/runs', runsRouter);

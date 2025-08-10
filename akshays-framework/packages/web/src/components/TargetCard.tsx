@@ -55,6 +55,12 @@ export default function TargetCard({ apiUrl, target }: { apiUrl: string; target:
           </div>
         ))}
       </div>
+      <div className="mt-2 text-xs text-emerald-300/60 flex gap-4">
+        <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-blue-400"></span> Running</div>
+        <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-400"></span> Completed</div>
+        <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> Failed</div>
+        <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-300"></span> Paused</div>
+      </div>
     </div>
   );
 }
@@ -82,9 +88,9 @@ function ArtifactLink({ apiUrl, executionId, name, label }: { apiUrl: string; ex
       if (!res.ok) return;
       const list = await res.json();
       const item = list.find((x: any) => x.name === name);
-      setPath(item?.path || null);
+      setPath(item?.id || null);
     })();
   }, [apiUrl, executionId, name]);
   if (!path) return <span className="opacity-40">{label}</span>;
-  return <a className="underline hover:text-emerald-400" href={`vscode://file/${path}`}>{label}</a>;
+  return <a className="underline hover:text-emerald-400" href={`${apiUrl}/api/artifacts/download/${path}`}>{label}</a>;
 }
