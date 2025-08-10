@@ -130,6 +130,7 @@ async function stagePassiveRecon(executionId: string) {
   done++; await updateProgress(executionId, totalSteps, done, 'finalize');
 
   await prisma.execution.update({ where: { id: executionId }, data: { currentStage: 'PASSIVE_RECON' } });
+  await prisma.artifact.create({ data: { executionId, name: 'stage1_passive_recon.log', path: logFile, mimeType: 'text/plain' } });
   emitProgress(executionId, { stage: 'PASSIVE_RECON', status: 'COMPLETED' });
 }
 
@@ -168,6 +169,7 @@ async function stageActiveRecon(executionId: string) {
 
   done++; await updateProgress(executionId, totalSteps, done, 'finalize');
 
+  await prisma.artifact.create({ data: { executionId, name: 'stage2_active_recon.log', path: logFile, mimeType: 'text/plain' } });
   emitProgress(executionId, { stage: 'ACTIVE_RECON', status: 'COMPLETED' });
 }
 
@@ -224,6 +226,7 @@ async function stageSpidering(executionId: string) {
   await prisma.artifact.create({ data: { executionId, name: 'urls_interesting_params.txt', path: interestingParams } });
 
   done++; await updateProgress(executionId, totalSteps, done, 'finalize');
+  await prisma.artifact.create({ data: { executionId, name: 'stage3_spidering.log', path: logFile, mimeType: 'text/plain' } });
 }
 
 async function stageFuzzing(executionId: string) {
@@ -263,6 +266,7 @@ async function stageFuzzing(executionId: string) {
   }
 
   done++; await updateProgress(executionId, totalSteps, done, 'finalize');
+  await prisma.artifact.create({ data: { executionId, name: 'stage4_fuzzing.log', path: logFile, mimeType: 'text/plain' } });
 }
 
 async function stageVulnScanning(executionId: string) {
@@ -311,6 +315,7 @@ async function stageVulnScanning(executionId: string) {
   }
 
   done++; await updateProgress(executionId, totalSteps, done, 'finalize');
+  await prisma.artifact.create({ data: { executionId, name: 'stage5_vuln_scanning.log', path: logFile, mimeType: 'text/plain' } });
 }
 
 new Worker(
