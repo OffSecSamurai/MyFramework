@@ -2,6 +2,8 @@ import { Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
+import express from 'express';
+import { createServer } from 'http';
 import { logger } from './utils/logger';
 import { setupExecutionWorker } from './workers/executionWorker';
 import { setupTaskWorker } from './workers/taskWorker';
@@ -15,6 +17,19 @@ export const prisma = new PrismaClient();
 
 // Initialize Redis
 export const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+
+// Create Express app for health checks
+const app = express();
+const server = createServer(app);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
 
 // Queue names
 export const QUEUE_NAMES = {
@@ -145,16 +160,26 @@ const gracefulShutdown = async (signal: string) => {
   await redis.quit();
   logger.info('Redis connection closed');
   
+  server.close(() => {
+    logger.info('HTTP server closed');
+  });
+  
   process.exit(0);
 };
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-// Start workers
-logger.info('🚀 Akshay\'s Framework Worker started');
-logger.info(`📊 Execution worker concurrency: ${executionWorker.concurrency}`);
-logger.info(`📊 Task worker concurrency: ${taskWorker.concurrency}`);
-logger.info(`📊 Report worker concurrency: ${reportWorker.concurrency}`);
+// Start HTTP server for health checks
+const PORT = process.env.WORKER_PORT || 3002;
+const HOST = process.env.WORKER_HOST || '0.0.0.0';
+
+server.listen(PORT, HOST, () => {
+  logger.info(`🚀 Akshay's Framework Worker started on http://${HOST}:${PORT}`);
+  logger.info(`📊 Health check available at http://${HOST}:${PORT}/health`);
+  logger.info(`📊 Execution worker concurrency: ${executionWorker.concurrency}`);
+  logger.info(`📊 Task worker concurrency: ${taskWorker.concurrency}`);
+  logger.info(`📊 Report worker concurrency: ${reportWorker.concurrency}`);
+});
 
 export { executionWorker, taskWorker, reportWorker };

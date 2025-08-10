@@ -1,50 +1,43 @@
+# Use Node.js 20 Alpine as base
 FROM node:20-alpine AS base
 
-# Install dependencies only when needed
-FROM base AS deps
+# Install dependencies for native modules
 RUN apk add --no-cache libc6-compat
+
+# Set working directory
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* ./
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
 RUN npm ci --only=production
 
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Copy source code
 COPY . .
 
 # Generate Prisma client
 RUN npx prisma generate
 
-# Build the application
-RUN npm run build
-
-# Production image, copy all the files and run the app
-FROM base AS runner
-WORKDIR /app
-
-ENV NODE_ENV=production
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nodejs
-
-# Copy the built application
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/prisma ./prisma
-
 # Create storage directories
-RUN mkdir -p /app/storage/artifacts /app/storage/logs /app/storage/database /app/storage/reports
-RUN chown -R nodejs:nodejs /app/storage
+RUN mkdir -p /app/storage/artifacts /app/storage/logs /app/storage/reports
 
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nodejs -u 1001
+
+# Change ownership
+RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user
 USER nodejs
 
+# Expose port
 EXPOSE 3001
 
-ENV PORT=3001
-ENV HOSTNAME="0.0.0.0"
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node healthcheck.js
 
+# Start the application
 CMD ["node", "dist/index.js"]

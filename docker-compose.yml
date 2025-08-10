@@ -1,10 +1,10 @@
 version: '3.8'
 
 services:
-  # Redis for job queue management
+  # Redis for job queue
   redis:
     image: redis:7-alpine
-    container_name: akshays_redis
+    container_name: akshays-framework-redis
     ports:
       - "6379:6379"
     volumes:
@@ -16,25 +16,24 @@ services:
       timeout: 10s
       retries: 3
 
-  # API Backend Service
+  # API Backend
   api:
     build:
-      context: .
-      dockerfile: packages/api/Dockerfile
-    container_name: akshays_api
+      context: ./packages/api
+      dockerfile: Dockerfile
+    container_name: akshays-framework-api
     ports:
-      - "${API_PORT:-3001}:3001"
+      - "3001:3001"
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
-      - JWT_SECRET=${JWT_SECRET}
-      - SESSION_SECRET=${SESSION_SECRET}
-      - CORS_ORIGIN=${CORS_ORIGIN}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/prisma/database.sqlite
+      - REDIS_URL=redis://redis:6379
+      - PORT=3001
+      - STORAGE_PATH=/app/storage
+      - LOG_LEVEL=info
     volumes:
-      - ./storage:/app/storage
-      - ./prisma:/app/prisma
+      - api_storage:/app/storage
+      - api_database:/app/prisma
     depends_on:
       redis:
         condition: service_healthy
@@ -45,80 +44,70 @@ services:
       timeout: 10s
       retries: 3
 
-  # Web Frontend Service
+  # Web Frontend
   web:
     build:
-      context: .
-      dockerfile: packages/web/Dockerfile
-    container_name: akshays_web
+      context: ./packages/web
+      dockerfile: Dockerfile
+    container_name: akshays-framework-web
     ports:
-      - "${WEB_PORT:-3000}:3000"
-    environment:
-      - VITE_API_URL=${VITE_API_URL:-http://localhost:3001}
+      - "3000:80"
     depends_on:
       api:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Worker Service for tool execution
+  # Worker Service
   worker:
     build:
-      context: .
-      dockerfile: packages/worker/Dockerfile
-    container_name: akshays_worker
+      context: ./packages/worker
+      dockerfile: Dockerfile
+    container_name: akshays-framework-worker
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - REDIS_URL=${REDIS_URL}
-      - WORKER_THREADS=${WORKER_THREADS:-50}
-      - WORKER_TIMEOUT=${WORKER_TIMEOUT:-300000}
-      - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-5}
-      - EXECUTION_MODE=${EXECUTION_MODE:-docker}
-      - STORAGE_PATH=${STORAGE_PATH:-./storage}
-      - ARTIFACTS_PATH=${ARTIFACTS_PATH:-./storage/artifacts}
-      - CHAOS_API_KEY=${CHAOS_API_KEY}
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
-      - SHODAN_API_KEY=${SHODAN_API_KEY}
-      - HTTP_PROXY=${HTTP_PROXY}
-      - HTTPS_PROXY=${HTTPS_PROXY}
-      - NO_PROXY=${NO_PROXY}
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/prisma/database.sqlite
+      - REDIS_URL=redis://redis:6379
+      - STORAGE_PATH=/app/storage
+      - LOG_LEVEL=info
+      - WORKER_CONCURRENCY=5
+      - EXECUTION_MODE=docker
     volumes:
-      - ./storage:/app/storage
+      - worker_storage:/app/storage
+      - api_database:/app/prisma
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       redis:
+        condition: service_healthy
+      api:
         condition: service_healthy
     restart: unless-stopped
     deploy:
       replicas: 2
 
-  # Tool Containers for isolated execution
+  # Tools Service (contains all security tools)
   tools:
     build:
-      context: packages/worker/tools
-      dockerfile: Dockerfile
-    container_name: akshays_tools
-    image: akshays/tools:latest
-    volumes:
-      - ./storage:/data
+      context: ./packages/worker
+      dockerfile: Dockerfile.tools
+    container_name: akshays-framework-tools
     environment:
-      - CHAOS_API_KEY=${CHAOS_API_KEY}
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
-    restart: unless-stopped
-
-  # Database (SQLite in volume)
-  database:
-    image: alpine:latest
-    container_name: akshays_database
+      - NODE_ENV=production
     volumes:
-      - ./storage/database:/data
-    command: ["sh", "-c", "mkdir -p /data && touch /data/akshays_framework.db && tail -f /dev/null"]
+      - tools_storage:/app/tools
     restart: unless-stopped
 
 volumes:
   redis_data:
-    driver: local
+  api_storage:
+  worker_storage:
+  api_database:
+  tools_storage:
 
 networks:
   default:
-    name: akshays_network
-    driver: bridge
+    name: akshays-framework-network

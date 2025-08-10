@@ -16,10 +16,13 @@
     "build:worker": "cd packages/worker && npm run build",
     "start": "docker-compose up -d",
     "stop": "docker-compose down",
-    "setup": "npm install && npm run build && npx prisma generate",
-    "db:migrate": "npx prisma migrate dev",
-    "db:reset": "npx prisma migrate reset",
-    "db:studio": "npx prisma studio"
+    "setup": "npm run setup:db && npm run build",
+    "setup:db": "cd packages/api && npx prisma generate && npx prisma db push",
+    "db:migrate": "cd packages/api && npx prisma migrate dev",
+    "db:reset": "cd packages/api && npx prisma migrate reset",
+    "db:studio": "cd packages/api && npx prisma studio",
+    "install:all": "npm install && npm run install:packages",
+    "install:packages": "cd packages/api && npm install && cd ../web && npm install && cd ../worker && npm install"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
@@ -28,5 +31,14 @@
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=9.0.0"
-  }
+  },
+  "keywords": [
+    "reconnaissance",
+    "vulnerability-scanning",
+    "security",
+    "bug-bounty",
+    "pentesting"
+  ],
+  "author": "Akshay",
+  "license": "MIT"
 }

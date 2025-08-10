@@ -1,178 +1,224 @@
-# Akshay's Framework
+# Akshay's Framework 🚀
 
-A comprehensive reconnaissance and vulnerability testing framework inspired by Ars0n, designed for bug bounty workflows and penetration testing.
+A comprehensive reconnaissance and vulnerability testing framework for bug bounty hunters and security researchers.
 
-## 🚀 Features
+## 🎯 Features
 
-- **Multiple Execution Modes**: Full, Custom, and Single-Tool modes
-- **Phased Workflow**: Initial Assessment → Reconnaissance → Vulnerability Discovery → Exploitation → Documentation
-- **Real-time Monitoring**: Live progress tracking with WebSocket updates
-- **Docker Integration**: Isolated tool execution with native fallback
-- **Modern UI**: React 18 + Vite + Tailwind CSS with dark theme
-- **Persistent Storage**: SQLite with Prisma ORM for targets and executions
-- **Queue Management**: BullMQ + Redis for scalable job processing
+- **Complete Reconnaissance Workflow**: From subdomain discovery to vulnerability scanning
+- **Smart Data Processing**: Automatic cleaning, deduplication, and enrichment
+- **Real-Time Monitoring**: Live progress tracking and status updates
+- **Advanced UI**: Modern, responsive interface with comprehensive data display
+- **Production Ready**: Scalable, reliable, and optimized for your hardware
 
-## 🏗️ Architecture
+## 🛠️ Quick Start
 
-```
-akshays-framework/
-├── packages/
-│   ├── api/          # Node.js + Express backend
-│   ├── web/          # React 18 + Vite frontend
-│   └── worker/       # Docker worker containers
-├── prisma/           # Database schema
-├── storage/          # Artifacts and reports
-├── scripts/          # Setup and build scripts
-└── docker-compose.yml
-```
+### Prerequisites
 
-## 🛠️ Installation
+- **Docker & Docker Compose**
+- **Node.js 20+**
+- **Git**
 
-### Quick Start (Windows)
-```powershell
-# Clone and setup
-git clone <repository>
-cd akshays-framework
-.\scripts\setup.ps1
+### Installation
 
-# Start the framework
-docker-compose up -d
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd akshays-framework
+   ```
 
-# Access the UI
-http://localhost:3000
-```
+2. **Run the installation script**
+   ```bash
+   chmod +x install.sh
+   ./install.sh
+   ```
 
-### Manual Setup
+3. **Access the framework**
+   - Web Interface: http://localhost:3000
+   - API Endpoint: http://localhost:3001
+
+### Manual Installation
+
+If you prefer manual installation:
+
 ```bash
 # Install dependencies
-npm install
+npm run install:all
 
-# Build containers
+# Setup database
+npm run setup:db
+
+# Build packages
+npm run build
+
+# Build Docker images
 docker-compose build
 
 # Start services
 docker-compose up -d
-
-# Run database migrations
-npx prisma migrate dev
 ```
 
-## 🎯 Usage
+## 🏗️ Architecture
 
-### Execution Modes
+### Services
 
-1. **Full Mode**: Complete reconnaissance chain
-   ```bash
-   node dist/index.js run full --target example.com --threads 50
-   ```
+- **API** (Port 3001): Backend API with Express.js
+- **Web** (Port 3000): React frontend served by Nginx
+- **Worker** (Port 3002): Background job processing
+- **Redis** (Port 6379): Job queue and caching
+- **Tools**: Container with all security tools
 
-2. **Custom Mode**: Select specific tools
-   ```bash
-   node dist/index.js run custom --target example.com --tools "subfinder,nuclei"
-   ```
+### Data Flow
 
-3. **Single Tool**: Run one tool with dependencies
-   ```bash
-   node dist/index.js run tool --target example.com --tool aquatone
-   ```
+```
+1. Tool Execution → Raw Output
+2. Data Extraction → Parsed Data
+3. Data Cleaning → Normalized Data
+4. Deduplication → Unique Data
+5. Validation → Verified Data
+6. Enrichment → Enhanced Data
+7. Storage → Database + Files
+8. UI Display → Real-Time Updates
+```
 
-### Tool Chain
+## 🎮 Usage
 
-**Stage 1: Passive Reconnaissance**
-- Subfinder (subdomain enumeration)
-- Assetfinder (additional subdomains)
-- Findomain (fast subdomain discovery)
-- Chaos (cloud asset discovery)
-- Amass (comprehensive enumeration)
+### 1. Create a Target
 
-**Stage 2: Active Reconnaissance**
-- DNSx (DNS resolution and live hosts)
-- HTTPx (web server discovery and tech fingerprinting)
-- Aquatone (visual reconnaissance)
-- Gowitness (screenshot capture)
+Add a new target for reconnaissance:
 
-**Stage 3: Spidering & Endpoint Discovery**
-- Gau (Wayback Machine URLs)
-- Waybackurls (historical URLs)
-- Katana (web crawling)
-- Arjun (parameter discovery)
-- ParamSpider (parameter extraction)
+```bash
+curl -X POST http://localhost:3001/api/targets \
+  -H "Content-Type: application/json" \
+  -d '{
+    "domain": "example.com",
+    "name": "Example Target",
+    "description": "Test target for reconnaissance"
+  }'
+```
 
-**Stage 4: Active Fuzzing**
-- Gobuster (directory brute-forcing)
-- FFUF (advanced fuzzing)
-- Nuclei (vulnerability scanning)
+### 2. Start Execution
 
-**Stage 5: Vulnerability Scanning**
-- Nuclei (comprehensive scanning)
-- Nikto (web server analysis)
-- CMSmap (CMS vulnerability detection)
+Choose from three execution modes:
+
+- **Full Mode**: Complete reconnaissance workflow
+- **Custom Mode**: Select specific tools
+- **Single Tool**: Run one tool with dependencies
+
+### 3. Monitor Progress
+
+Watch real-time progress in the web interface:
+- Live execution status
+- Tool completion tracking
+- Data processing statistics
+- Real-time results
+
+### 4. View Results
+
+Access comprehensive results:
+- **Overview**: Summary statistics
+- **Subdomains**: Discovered subdomains
+- **Live Hosts**: Active hosts
+- **Live URLs**: Working URLs
+- **Vulnerabilities**: Security findings
+- **Artifacts**: Generated files
+
+## 🛡️ Security Tools
+
+### Subdomain Enumeration
+- **Subfinder**: Fast subdomain discovery
+- **Assetfinder**: Domain and subdomain discovery
+- **Findomain**: Cross-platform subdomain enumerator
+- **Chaos**: Cloud asset discovery
+- **Amass**: In-depth attack surface mapping
+
+### DNS Resolution
+- **DNSx**: Multi-purpose DNS toolkit
+
+### Web Discovery
+- **HTTPx**: HTTP toolkit for probing
+- **Aquatone**: Visual reconnaissance
+
+### Content Discovery
+- **Gau**: Fetch known URLs
+- **Waybackurls**: Wayback Machine URLs
+- **Katana**: Next-generation crawling
+- **Arjun**: HTTP parameter discovery
+- **Gobuster**: Directory/file busting
+- **FFUF**: Fast web fuzzer
+
+### Vulnerability Scanning
+- **Nuclei**: Fast vulnerability scanner
+- **Nikto**: Web server scanner
+
+## 📊 Data Processing
+
+### Automatic Processing
+- **Deduplication**: Remove duplicate entries
+- **Cleaning**: Normalize and validate data
+- **Enrichment**: Add metadata and risk scores
+- **Categorization**: Classify by type and severity
+
+### Processing Statistics
+Each step tracks:
+- Raw count (original data)
+- Cleaned count (after validation)
+- Deduplicated count (after deduplication)
+- Final count (processed data)
 
 ## 🔧 Configuration
 
 ### Environment Variables
-Copy `.env.example` to `.env` and configure:
 
-```env
+Create a `.env` file based on `.env.example`:
+
+```bash
 # Database
-DATABASE_URL="file:./dev.db"
+DATABASE_URL=file:./storage/database.sqlite
 
 # Redis
-REDIS_URL="redis://localhost:6379"
+REDIS_URL=redis://localhost:6379
 
-# API Configuration
-API_PORT=3001
-API_HOST=0.0.0.0
+# API
+PORT=3001
+CORS_ORIGIN=http://localhost:3000
 
-# Worker Configuration
-WORKER_THREADS=50
-WORKER_TIMEOUT=300000
+# Worker
+WORKER_CONCURRENCY=5
+EXECUTION_MODE=docker
 
-# Tool Paths (for native mode)
-SUBFINDER_PATH="/usr/local/bin/subfinder"
-NUCLEI_PATH="/usr/local/bin/nuclei"
-# ... other tools
+# Storage
+STORAGE_PATH=./storage
+
+# Logging
+LOG_LEVEL=info
 ```
 
 ### Docker Configuration
-The framework uses Docker for tool isolation:
 
-- **API Service**: Node.js backend with Express
-- **Web Service**: React frontend with Vite
-- **Worker Service**: Tool execution containers
-- **Redis Service**: Job queue management
+The framework uses Docker Compose for orchestration:
 
-## 📊 Monitoring & Reports
-
-### Real-time Dashboard
-- Live execution status with color-coded indicators
-- Progress bars for each tool
-- WebSocket updates for instant feedback
-
-### Artifact Storage
-```
-storage/
-├── example.com/
-│   ├── 2024-01-15_10-30-00/
-│   │   ├── subfinder_output.txt
-│   │   ├── nuclei_report.json
-│   │   ├── aquatone_report/
-│   │   └── screenshots/
-│   └── latest/
+```yaml
+services:
+  api:      # Backend API
+  web:      # Frontend
+  worker:   # Background processing
+  redis:    # Job queue
+  tools:    # Security tools
 ```
 
-### Report Generation
-- HTML reports with vulnerability summaries
-- JSON exports for integration
-- CSV data for analysis
+## 📈 Performance
 
-## 🔒 Security Considerations
+### Hardware Optimization
+- **CPU**: Optimized for Intel Core i5 12th Gen
+- **RAM**: Efficient for 16GB DDR4
+- **Storage**: Optimized for 512GB SSD
+- **Threading**: Capped at 50 threads
 
-- All tools run in isolated Docker containers
-- No sensitive data stored in plain text
-- Configurable timeout limits
-- Rate limiting for external APIs
-- Secure artifact storage
+### Scalability
+- **Worker Scaling**: Multiple worker instances
+- **Queue Management**: Redis-based job queues
+- **Resource Limits**: Docker container limits
+- **Caching**: Redis caching layer
 
 ## 🐛 Troubleshooting
 
@@ -180,30 +226,95 @@ storage/
 
 1. **Docker not running**
    ```bash
+   sudo systemctl start docker
+   ```
+
+2. **Port conflicts**
+   ```bash
+   # Check what's using the ports
+   netstat -tulpn | grep :3000
+   netstat -tulpn | grep :3001
+   ```
+
+3. **Database issues**
+   ```bash
+   # Reset database
+   npm run db:reset
+   ```
+
+4. **Build failures**
+   ```bash
+   # Clean and rebuild
    docker-compose down
+   docker system prune -f
+   docker-compose build --no-cache
+   ```
+
+### Logs
+
+View service logs:
+
+```bash
+# All services
+docker-compose logs -f
+
+# Specific service
+docker-compose logs -f api
+docker-compose logs -f worker
+docker-compose logs -f web
+```
+
+## 🚀 Production Deployment
+
+### Requirements
+- **Docker & Docker Compose**
+- **4GB+ RAM**
+- **20GB+ Storage**
+- **Linux/Windows/macOS**
+
+### Deployment Steps
+
+1. **Clone and setup**
+   ```bash
+   git clone <repository-url>
+   cd akshays-framework
+   ./install.sh
+   ```
+
+2. **Configure environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env with production values
+   ```
+
+3. **Start services**
+   ```bash
    docker-compose up -d
    ```
 
-2. **Database connection issues**
+4. **Verify deployment**
    ```bash
-   npx prisma migrate reset
-   npx prisma generate
+   curl http://localhost:3001/health
+   curl http://localhost:3000/health
    ```
 
-3. **Tool execution failures**
-   - Check Docker container logs
-   - Verify tool paths in configuration
-   - Ensure sufficient system resources
+## 📝 API Documentation
 
-### Logs
-```bash
-# View all logs
-docker-compose logs -f
+### Endpoints
 
-# View specific service
-docker-compose logs -f api
-docker-compose logs -f worker
-```
+- `GET /health` - Health check
+- `GET /api/targets` - List targets
+- `POST /api/targets` - Create target
+- `GET /api/executions` - List executions
+- `POST /api/executions` - Start execution
+- `GET /api/vulnerabilities` - List vulnerabilities
+- `GET /api/artifacts` - List artifacts
+
+### WebSocket Events
+
+- `execution-update` - Execution status updates
+- `task-update` - Task completion updates
+- `progress-update` - Progress percentage updates
 
 ## 🤝 Contributing
 
@@ -215,14 +326,14 @@ docker-compose logs -f worker
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- Inspired by Ars0n framework
-- Built with modern web technologies
-- Designed for bug bounty hunters and security researchers
+- **ProjectDiscovery** for amazing security tools
+- **OWASP** for security guidelines
+- **Bug bounty community** for inspiration
 
 ---
 
-**Note**: This framework is for authorized security testing only. Always ensure you have proper authorization before testing any target.
+**Akshay's Framework** - Making reconnaissance and vulnerability testing accessible and efficient! 🎯
