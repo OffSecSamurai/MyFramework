@@ -3,7 +3,7 @@ WORKDIR /app
 
 # Install base deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates git curl wget jq dnsutils whois nmap python3 python3-pip openssh-client build-essential \
+    ca-certificates git curl wget jq dnsutils whois nmap python3 python3-pip openssh-client build-essential seclists \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Go toolchain
@@ -34,6 +34,10 @@ RUN go install github.com/tomnomnom/gf@latest && \
 
 # WAFW00F (Python)
 RUN pip3 install --no-cache-dir wafw00f
+
+# Gobuster and ffuf
+RUN go install github.com/OJ/gobuster/v3@latest && \
+    go install github.com/ffuf/ffuf/v2@latest
 
 COPY package.json package-lock.json* .npmrc* ./
 COPY packages/worker/package.json ./packages/worker/

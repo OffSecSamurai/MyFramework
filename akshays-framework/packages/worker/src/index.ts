@@ -226,6 +226,45 @@ async function stageSpidering(executionId: string) {
   done++; await updateProgress(executionId, totalSteps, done, 'finalize');
 }
 
+async function stageFuzzing(executionId: string) {
+  const exec = await prisma.execution.findUnique({ where: { id: executionId } });
+  if (!exec) throw new Error('execution not found');
+  const baseDir = exec.storagePath;
+  const logFile = path.join(baseDir, 'stage4_fuzzing.log');
+
+  const liveUrls = path.join(baseDir, 'live_urls.txt');
+  const gobusterReport = path.join(baseDir, 'gobuster_report.txt');
+  const ffufReportJson = path.join(baseDir, 'ffuf_dir_fuzz.json');
+  const ffufAccessible = path.join(baseDir, 'ffuf_accessible_paths.txt');
+
+  const totalSteps = 3; let done = 0;
+  await updateProgress(executionId, totalSteps, done, 'gobuster');
+
+  // Use a moderate wordlist to fit hardware constraints
+  const wordlist = '/usr/share/seclists/Discovery/Web-Content/common.txt';
+
+  // Gobuster against each live URL (light concurrency)
+  await runCmd('sh', ['-lc', `if [ -s ${path.basename(liveUrls)} ]; then while read u; do gobuster dir -q -t 30 -u "$u" -w ${wordlist} || true; done < ${path.basename(liveUrls)} | tee ${path.basename(gobusterReport)}; fi`], baseDir, logFile);
+  if (await fs.pathExists(gobusterReport)) {
+    await prisma.artifact.create({ data: { executionId, name: 'gobuster_report.txt', path: gobusterReport } });
+  }
+
+  done++; await updateProgress(executionId, totalSteps, done, 'ffuf');
+
+  // ffuf: single pass across base URLs
+  await runCmd('sh', ['-lc', `if [ -s ${path.basename(liveUrls)} ]; then while read u; do ffuf -mc all -t 30 -u "$u"/FUZZ -w ${wordlist} -of json -o ${path.basename(ffufReportJson)}tmp || true; cat ${path.basename(ffufReportJson)}tmp; done < ${path.basename(liveUrls)} > ${path.basename(ffufReportJson)}; fi`], baseDir, logFile);
+  await runCmd('sh', ['-lc', `if [ -f ${path.basename(ffufReportJson)} ]; then cat ${path.basename(ffufReportJson)} | jq -r '.. | .results? // empty | .[] | select(.status != 403) | .url' | sort -u > ${path.basename(ffufAccessible)}; fi`], baseDir, logFile);
+
+  if (await fs.pathExists(ffufReportJson)) {
+    await prisma.artifact.create({ data: { executionId, name: 'ffuf_dir_fuzz.json', path: ffufReportJson } });
+  }
+  if (await fs.pathExists(ffufAccessible)) {
+    await prisma.artifact.create({ data: { executionId, name: 'ffuf_accessible_paths.txt', path: ffufAccessible } });
+  }
+
+  done++; await updateProgress(executionId, totalSteps, done, 'finalize');
+}
+
 new Worker(
   'runs',
   async (job: Job) => {
@@ -236,6 +275,10 @@ new Worker(
     }
     if (name === 'stage3-spidering') {
       await stageSpidering((job.data as any).executionId);
+      return;
+    }
+    if (name === 'stage4-fuzzing') {
+      await stageFuzzing((job.data as any).executionId);
       return;
     }
     const { executionId } = job.data as { executionId: string };

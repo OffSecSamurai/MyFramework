@@ -77,6 +77,13 @@ router.post('/:id/advance-stage', async (req, res) => {
         await runsQueue.add('stage3-spidering', { executionId: exec.id }, { removeOnComplete: true });
         return res.json({ ok: true });
     }
+    if (stage === 'FUZZING') {
+        if (exec.currentStage !== 'SPIDERING')
+            return res.status(400).json({ error: 'current stage is not SPIDERING' });
+        await prisma.execution.update({ where: { id: exec.id }, data: { currentStage: 'FUZZING' } });
+        await runsQueue.add('stage4-fuzzing', { executionId: exec.id }, { removeOnComplete: true });
+        return res.json({ ok: true });
+    }
     return res.status(400).json({ error: 'unsupported stage transition' });
 });
 export default router;
