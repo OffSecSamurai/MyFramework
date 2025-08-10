@@ -4,7 +4,8 @@ set -euo pipefail
 echo "[+] Installing dependencies with pnpm"
 if ! command -v pnpm >/dev/null 2>&1; then
   echo "[+] pnpm not found, installing globally via npm"
-  npm install -g pnpm@10.14.0
+  curl -fsSL https://get.pnpm.io/install.sh | SHELL="$(which bash)" sh -
+  export PATH="$HOME/.local/share/pnpm:$PATH"
 fi
 
 # ensure pnpm available in PATH for this script (global install path)

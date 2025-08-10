@@ -3,7 +3,8 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY ../../ ./
 RUN npm install -g pnpm@10.14.0
-RUN pnpm install --frozen-lockfile
+ENV SHELL=/bin/sh
+RUN pnpm install --no-frozen-lockfile
 RUN pnpm --filter @afw/web build
 
 # production
