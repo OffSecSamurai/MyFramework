@@ -249,13 +249,33 @@ async function stageVulnScanning(executionId) {
     const resolved = path.join(baseDir, 'resolved_hosts.txt');
     const nucleiGeneral = path.join(baseDir, 'nuclei_general_scan.txt');
     const nucleiTakeover = path.join(baseDir, 'nuclei_takeover_scan.txt');
+    const nucleiJsonl = path.join(baseDir, 'nuclei_general_scan.jsonl');
     const totalSteps = 3;
     let done = 0;
     await updateProgress(executionId, totalSteps, done, 'nuclei-general');
     // General Nuclei scan on live URLs (if present) else fallback to live_urls.txt
-    await runCmd('sh', ['-lc', `targets_file=${path.basename(liveUrls)}; [ ! -s "$targets_file" ] && targets_file=live_urls.txt; if [ -s "$targets_file" ]; then nuclei -l "$targets_file" -o ${path.basename(nucleiGeneral)} || true; fi`], baseDir, logFile);
+    await runCmd('sh', ['-lc', `targets_file=${path.basename(liveUrls)}; [ ! -s \"$targets_file\" ] && targets_file=live_urls.txt; if [ -s \"$targets_file\" ]; then nuclei -l \"$targets_file\" -o ${path.basename(nucleiGeneral)} -jsonl -irr -silent > ${path.basename(nucleiJsonl)} || true; fi`], baseDir, logFile);
     if (await fs.pathExists(nucleiGeneral)) {
         await prisma.artifact.create({ data: { executionId, name: 'nuclei_general_scan.txt', path: nucleiGeneral } });
+    }
+    if (await fs.pathExists(nucleiJsonl)) {
+        await prisma.artifact.create({ data: { executionId, name: 'nuclei_general_scan.jsonl', path: nucleiJsonl, mimeType: 'application/x-ndjson' } });
+        try {
+            const content = await fs.readFile(nucleiJsonl, 'utf-8');
+            for (const line of content.split('\n')) {
+                if (!line.trim())
+                    continue;
+                try {
+                    const obj = JSON.parse(line);
+                    const title = obj.info?.name || obj.templateID || 'nuclei finding';
+                    const severity = String(obj.info?.severity || 'INFO').toUpperCase();
+                    const details = JSON.stringify(obj);
+                    await prisma.vulnerability.create({ data: { executionId, title, severity, source: 'nuclei', details } });
+                }
+                catch { }
+            }
+        }
+        catch { }
     }
     done++;
     await updateProgress(executionId, totalSteps, done, 'nuclei-takeover');

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export default function TargetCard({ apiUrl, target }: { apiUrl: string; target: any }) {
+export default function TargetCard({ apiUrl, target, onOpenExecution }: { apiUrl: string; target: any; onOpenExecution: (id: string) => void }) {
   const [executions, setExecutions] = useState<any[]>(target.executions || []);
 
   useEffect(() => {
@@ -23,6 +23,7 @@ export default function TargetCard({ apiUrl, target }: { apiUrl: string; target:
             <div className="flex items-center justify-between">
               <span className="text-emerald-300/80">{e.mode} • {e.currentStage}</span>
               <div className="flex items-center gap-2">
+                <button onClick={() => onOpenExecution(e.id)} className="px-2 py-1 rounded border border-emerald-700 text-emerald-300 hover:bg-emerald-900/30">Open</button>
                 {e.currentStage === 'PASSIVE_RECON' && (
                   <button
                     onClick={async () => {

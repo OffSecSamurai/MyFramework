@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import TargetCard from './TargetCard';
 import { io } from 'socket.io-client';
 
-export default function Dashboard({ apiUrl, targets, onRefresh }: { apiUrl: string; targets: any[]; onRefresh: () => void }) {
+export default function Dashboard({ apiUrl, targets, onRefresh, onOpenExecution }: { apiUrl: string; targets: any[]; onRefresh: () => void; onOpenExecution: (id: string) => void }) {
   const [target, setTarget] = useState('');
   const [mode, setMode] = useState<'FULL' | 'CUSTOM' | 'SINGLE'>('FULL');
   const socket = useMemo(() => io(apiUrl, { path: '/socket.io' }), [apiUrl]);
@@ -39,7 +39,7 @@ export default function Dashboard({ apiUrl, targets, onRefresh }: { apiUrl: stri
       </div>
       <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
         {targets.map((t) => (
-          <TargetCard key={t.id} apiUrl={apiUrl} target={t} />
+          <TargetCard key={t.id} apiUrl={apiUrl} target={t} onOpenExecution={onOpenExecution} />
         ))}
       </div>
     </div>
