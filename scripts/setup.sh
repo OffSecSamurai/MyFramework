@@ -21,7 +21,7 @@ pnpm install
 
 # Generate Prisma client
 echo "[+] Generating Prisma client"
-pnpm --filter @afw/api exec prisma generate
+pnpm dlx prisma generate
 
 # Build all packages
 pnpm run build
