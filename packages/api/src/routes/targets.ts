@@ -3,6 +3,7 @@ import { prisma } from '../index';
 import { logger } from '../utils/logger';
 import { createError } from '../middleware/errorHandler';
 import { emitTargetUpdate } from '../services/websocket';
+import fs from 'fs-extra';
 
 const router = Router();
 
@@ -327,5 +328,192 @@ router.get('/:id/stats', async (req, res, next) => {
     next(error);
   }
 });
+
+// Get processed data for a target
+router.get('/:id/processed-data', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    
+    const target = await prisma.target.findUnique({
+      where: { id }
+    });
+
+    if (!target) {
+      throw createError('Target not found', 404);
+    }
+
+    // Get all data for the target
+    const [subdomains, liveHosts, liveUrls, vulnerabilities, artifacts] = await Promise.all([
+      prisma.artifact.findMany({
+        where: { targetId: id, type: 'SUBDOMAIN_LIST' },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.artifact.findMany({
+        where: { targetId: id, type: 'LIVE_HOSTS' },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.artifact.findMany({
+        where: { targetId: id, type: 'LIVE_URLS' },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.vulnerability.findMany({
+        where: { targetId: id },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.artifact.findMany({
+        where: { targetId: id },
+        orderBy: { createdAt: 'desc' }
+      })
+    ]);
+
+    // Process and extract data from artifacts
+    const processedData = {
+      subdomains: await extractSubdomainData(subdomains),
+      liveHosts: await extractLiveHostData(liveHosts),
+      liveUrls: await extractLiveUrlData(liveUrls),
+      vulnerabilities,
+      artifacts,
+      statistics: {
+        totalSubdomains: subdomains.length,
+        uniqueSubdomains: new Set(await extractSubdomainData(subdomains)).size,
+        liveHosts: liveHosts.length,
+        liveUrls: liveUrls.length,
+        vulnerabilities: vulnerabilities.length,
+        criticalVulns: vulnerabilities.filter(v => v.severity === 'CRITICAL').length,
+        highVulns: vulnerabilities.filter(v => v.severity === 'HIGH').length,
+        mediumVulns: vulnerabilities.filter(v => v.severity === 'MEDIUM').length,
+        lowVulns: vulnerabilities.filter(v => v.severity === 'LOW').length
+      }
+    };
+
+    res.json({
+      success: true,
+      data: processedData
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Download data for a target
+router.get('/:id/download/:type', async (req, res, next) => {
+  try {
+    const { id, type } = req.params;
+    
+    const target = await prisma.target.findUnique({
+      where: { id }
+    });
+
+    if (!target) {
+      throw createError('Target not found', 404);
+    }
+
+    let data: any = {};
+
+    switch (type) {
+      case 'subdomains':
+        const subdomains = await prisma.artifact.findMany({
+          where: { targetId: id, type: 'SUBDOMAIN_LIST' }
+        });
+        data = await extractSubdomainData(subdomains);
+        break;
+      case 'hosts':
+        const hosts = await prisma.artifact.findMany({
+          where: { targetId: id, type: 'LIVE_HOSTS' }
+        });
+        data = await extractLiveHostData(hosts);
+        break;
+      case 'urls':
+        const urls = await prisma.artifact.findMany({
+          where: { targetId: id, type: 'LIVE_URLS' }
+        });
+        data = await extractLiveUrlData(urls);
+        break;
+      case 'vulnerabilities':
+        data = await prisma.vulnerability.findMany({
+          where: { targetId: id }
+        });
+        break;
+      case 'artifacts':
+        data = await prisma.artifact.findMany({
+          where: { targetId: id }
+        });
+        break;
+      case 'all':
+        const [subdomainsAll, hostsAll, urlsAll, vulnsAll, artifactsAll] = await Promise.all([
+          prisma.artifact.findMany({ where: { targetId: id, type: 'SUBDOMAIN_LIST' } }),
+          prisma.artifact.findMany({ where: { targetId: id, type: 'LIVE_HOSTS' } }),
+          prisma.artifact.findMany({ where: { targetId: id, type: 'LIVE_URLS' } }),
+          prisma.vulnerability.findMany({ where: { targetId: id } }),
+          prisma.artifact.findMany({ where: { targetId: id } })
+        ]);
+        data = {
+          subdomains: await extractSubdomainData(subdomainsAll),
+          liveHosts: await extractLiveHostData(hostsAll),
+          liveUrls: await extractLiveUrlData(urlsAll),
+          vulnerabilities: vulnsAll,
+          artifacts: artifactsAll
+        };
+        break;
+      default:
+        throw createError('Invalid data type', 400);
+    }
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${type}_${target.domain}.json"`);
+    res.json(data);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Helper functions to extract data from artifacts
+async function extractSubdomainData(artifacts: any[]): Promise<string[]> {
+  const subdomains: string[] = [];
+  
+  for (const artifact of artifacts) {
+    try {
+      const content = await fs.readFile(artifact.path, 'utf-8');
+      const lines = content.split('\n').filter(line => line.trim());
+      subdomains.push(...lines);
+    } catch (error) {
+      logger.warn(`Failed to read artifact ${artifact.id}:`, error);
+    }
+  }
+  
+  return [...new Set(subdomains)]; // Remove duplicates
+}
+
+async function extractLiveHostData(artifacts: any[]): Promise<string[]> {
+  const hosts: string[] = [];
+  
+  for (const artifact of artifacts) {
+    try {
+      const content = await fs.readFile(artifact.path, 'utf-8');
+      const lines = content.split('\n').filter(line => line.trim());
+      hosts.push(...lines);
+    } catch (error) {
+      logger.warn(`Failed to read artifact ${artifact.id}:`, error);
+    }
+  }
+  
+  return [...new Set(hosts)]; // Remove duplicates
+}
+
+async function extractLiveUrlData(artifacts: any[]): Promise<string[]> {
+  const urls: string[] = [];
+  
+  for (const artifact of artifacts) {
+    try {
+      const content = await fs.readFile(artifact.path, 'utf-8');
+      const lines = content.split('\n').filter(line => line.trim());
+      urls.push(...lines);
+    } catch (error) {
+      logger.warn(`Failed to read artifact ${artifact.id}:`, error);
+    }
+  }
+  
+  return [...new Set(urls)]; // Remove duplicates
+}
 
 export default router;

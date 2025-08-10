@@ -3,10 +3,12 @@ import { logger } from '../utils/logger';
 import { TOOLS, ToolExecution } from '../types/tools';
 import { ToolExecutor } from '../tools/ToolExecutor';
 import { addTaskJob, JOB_TYPES } from '../index';
+import { DataProcessor } from '../utils/dataProcessor';
 import path from 'path';
 import fs from 'fs-extra';
 
 const toolExecutor = new ToolExecutor();
+const dataProcessor = DataProcessor.getInstance();
 
 export const setupTaskWorker = {
   async handleRunTool(data: any) {
@@ -222,64 +224,150 @@ export const setupTaskWorker = {
   },
 
   async processSubdomainResults(taskId: string, result: any, target: string) {
-    // Extract subdomains from output and save them
-    const subdomains = this.extractSubdomains(result.output);
+    // Extract subdomains from output and process them
+    const rawSubdomains = this.extractSubdomains(result.output);
     
-    if (subdomains.length > 0) {
-      const outputPath = path.join(process.env.STORAGE_PATH || './storage', 'artifacts', target, 'subdomains.txt');
-      await fs.writeFile(outputPath, subdomains.join('\n'));
+    if (rawSubdomains.length > 0) {
+      // Process and clean the data
+      const processedSubdomains = await dataProcessor.processSubdomainResults(target, rawSubdomains);
       
-      logger.info(`Extracted ${subdomains.length} subdomains from ${taskId}`);
+      // Save processed data
+      const outputPath = path.join(process.env.STORAGE_PATH || './storage', 'artifacts', target, 'subdomains.txt');
+      await fs.writeFile(outputPath, processedSubdomains.join('\n'));
+      
+      // Update task with processing statistics
+      await prisma.task.update({
+        where: { id: taskId },
+        data: {
+          metadata: JSON.stringify({
+            rawCount: rawSubdomains.length,
+            processedCount: processedSubdomains.length,
+            processingStats: {
+              cleaned: rawSubdomains.length,
+              deduplicated: processedSubdomains.length,
+              validated: processedSubdomains.length
+            }
+          })
+        }
+      });
+      
+      logger.info(`Processed subdomains: ${rawSubdomains.length} → ${processedSubdomains.length} for ${taskId}`);
     }
   },
 
   async processDNSResults(taskId: string, result: any, target: string) {
     // Process DNS resolution results
-    const liveHosts = this.extractLiveHosts(result.output);
+    const rawLiveHosts = this.extractLiveHosts(result.output);
     
-    if (liveHosts.length > 0) {
-      const outputPath = path.join(process.env.STORAGE_PATH || './storage', 'artifacts', target, 'live_hosts.txt');
-      await fs.writeFile(outputPath, liveHosts.join('\n'));
+    if (rawLiveHosts.length > 0) {
+      // Process and clean the data
+      const processedLiveHosts = await dataProcessor.processLiveHosts(target, rawLiveHosts);
       
-      logger.info(`Extracted ${liveHosts.length} live hosts from ${taskId}`);
+      // Save processed data
+      const outputPath = path.join(process.env.STORAGE_PATH || './storage', 'artifacts', target, 'live_hosts.txt');
+      await fs.writeFile(outputPath, processedLiveHosts.join('\n'));
+      
+      // Update task with processing statistics
+      await prisma.task.update({
+        where: { id: taskId },
+        data: {
+          metadata: JSON.stringify({
+            rawCount: rawLiveHosts.length,
+            processedCount: processedLiveHosts.length,
+            processingStats: {
+              cleaned: rawLiveHosts.length,
+              deduplicated: processedLiveHosts.length,
+              validated: processedLiveHosts.length
+            }
+          })
+        }
+      });
+      
+      logger.info(`Processed live hosts: ${rawLiveHosts.length} → ${processedLiveHosts.length} for ${taskId}`);
     }
   },
 
   async processHTTPResults(taskId: string, result: any, target: string) {
     // Process HTTP discovery results
-    const liveUrls = this.extractLiveUrls(result.output);
+    const rawLiveUrls = this.extractLiveUrls(result.output);
     
-    if (liveUrls.length > 0) {
-      const outputPath = path.join(process.env.STORAGE_PATH || './storage', 'artifacts', target, 'live_urls.txt');
-      await fs.writeFile(outputPath, liveUrls.join('\n'));
+    if (rawLiveUrls.length > 0) {
+      // Process and clean the data
+      const processedLiveUrls = await dataProcessor.processLiveUrls(target, rawLiveUrls);
       
-      logger.info(`Extracted ${liveUrls.length} live URLs from ${taskId}`);
+      // Save processed data
+      const outputPath = path.join(process.env.STORAGE_PATH || './storage', 'artifacts', target, 'live_urls.txt');
+      await fs.writeFile(outputPath, processedLiveUrls.join('\n'));
+      
+      // Update task with processing statistics
+      await prisma.task.update({
+        where: { id: taskId },
+        data: {
+          metadata: JSON.stringify({
+            rawCount: rawLiveUrls.length,
+            processedCount: processedLiveUrls.length,
+            processingStats: {
+              cleaned: rawLiveUrls.length,
+              deduplicated: processedLiveUrls.length,
+              validated: processedLiveUrls.length
+            }
+          })
+        }
+      });
+      
+      logger.info(`Processed live URLs: ${rawLiveUrls.length} → ${processedLiveUrls.length} for ${taskId}`);
     }
   },
 
   async processVulnerabilityResults(taskId: string, result: any, target: string) {
     // Process vulnerability scan results
     try {
-      const vulnerabilities = JSON.parse(result.output);
+      const rawVulnerabilities = JSON.parse(result.output);
       
-      for (const vuln of vulnerabilities) {
+      // Process and clean the vulnerabilities
+      const processedVulnerabilities = await dataProcessor.processVulnerabilities(target, rawVulnerabilities);
+      
+      // Save to database
+      for (const vuln of processedVulnerabilities) {
         await prisma.vulnerability.create({
           data: {
             targetId: target,
-            tool: 'nuclei',
+            tool: vuln.tool || 'nuclei',
             type: vuln.type || 'unknown',
-            severity: this.mapSeverity(vuln.info?.severity),
-            title: vuln.info?.name || 'Unknown vulnerability',
-            description: vuln.info?.description || '',
+            severity: vuln.severity,
+            title: vuln.title,
+            description: vuln.description,
             evidence: JSON.stringify(vuln),
-            cve: vuln.info?.cve?.[0] || null,
-            cwe: vuln.info?.cwe?.[0] || null,
-            cvss: vuln.info?.cvss?.score || null
+            cve: vuln.cve || null,
+            cwe: vuln.cwe || null,
+            cvss: vuln.cvss || null,
+            status: vuln.status || 'NEW',
+            metadata: JSON.stringify({
+              riskScore: vuln.riskScore,
+              tags: vuln.tags,
+              timestamp: vuln.timestamp
+            })
           }
         });
       }
       
-      logger.info(`Processed ${vulnerabilities.length} vulnerabilities from ${taskId}`);
+      // Update task with processing statistics
+      await prisma.task.update({
+        where: { id: taskId },
+        data: {
+          metadata: JSON.stringify({
+            rawCount: rawVulnerabilities.length,
+            processedCount: processedVulnerabilities.length,
+            processingStats: {
+              cleaned: rawVulnerabilities.length,
+              deduplicated: processedVulnerabilities.length,
+              enriched: processedVulnerabilities.length
+            }
+          })
+        }
+      });
+      
+      logger.info(`Processed vulnerabilities: ${rawVulnerabilities.length} → ${processedVulnerabilities.length} for ${taskId}`);
     } catch (error) {
       logger.warn(`Failed to parse vulnerability results from ${taskId}:`, error);
     }
