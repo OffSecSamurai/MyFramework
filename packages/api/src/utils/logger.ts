@@ -1,9 +1,8 @@
 import winston from 'winston';
-import DailyRotateFile from 'winston-daily-rotate-file';
 import path from 'path';
 
 // Create logs directory if it doesn't exist
-const logsDir = process.env.LOG_FILE ? path.dirname(process.env.LOG_FILE) : './storage/logs';
+const logsDir = process.env['LOG_FILE'] ? path.dirname(process.env['LOG_FILE']) : './storage/logs';
 
 // Define log format
 const logFormat = winston.format.combine(
@@ -31,58 +30,42 @@ const consoleFormat = winston.format.combine(
 
 // Create logger instance
 export const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: process.env['LOG_LEVEL'] || 'info',
   format: logFormat,
   defaultMeta: { service: 'akshays-framework-api' },
   transports: [
     // Console transport for development
     new winston.transports.Console({
       format: consoleFormat,
-      level: process.env.NODE_ENV === 'production' ? 'warn' : 'debug'
+      level: process.env['NODE_ENV'] === 'production' ? 'warn' : 'debug'
     }),
     
     // File transport for all logs
-    new DailyRotateFile({
-      filename: path.join(logsDir, 'akshays-framework-%DATE%.log'),
-      datePattern: 'YYYY-MM-DD',
-      zippedArchive: true,
-      maxSize: '20m',
-      maxFiles: '14d',
+    new winston.transports.File({
+      filename: path.join(logsDir, 'akshays-framework-api.log'),
       level: 'info'
     }),
     
     // Error file transport
-    new DailyRotateFile({
-      filename: path.join(logsDir, 'akshays-framework-error-%DATE%.log'),
-      datePattern: 'YYYY-MM-DD',
-      zippedArchive: true,
-      maxSize: '20m',
-      maxFiles: '30d',
+    new winston.transports.File({
+      filename: path.join(logsDir, 'akshays-framework-api-error.log'),
       level: 'error'
     })
   ],
   exceptionHandlers: [
-    new DailyRotateFile({
-      filename: path.join(logsDir, 'akshays-framework-exception-%DATE%.log'),
-      datePattern: 'YYYY-MM-DD',
-      zippedArchive: true,
-      maxSize: '20m',
-      maxFiles: '30d'
+    new winston.transports.File({
+      filename: path.join(logsDir, 'akshays-framework-api-exception.log')
     })
   ],
   rejectionHandlers: [
-    new DailyRotateFile({
-      filename: path.join(logsDir, 'akshays-framework-rejection-%DATE%.log'),
-      datePattern: 'YYYY-MM-DD',
-      zippedArchive: true,
-      maxSize: '20m',
-      maxFiles: '30d'
+    new winston.transports.File({
+      filename: path.join(logsDir, 'akshays-framework-api-rejection.log')
     })
   ]
 });
 
-// Create a stream object for Morgan
-export const logStream = {
+// Stream for Morgan integration
+export const stream = {
   write: (message: string) => {
     logger.info(message.trim());
   }

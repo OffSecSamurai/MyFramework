@@ -1,93 +1,79 @@
-import { Server as SocketIOServer } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import { logger } from '../utils/logger';
 
-export const setupWebSocket = (io: SocketIOServer) => {
-  io.on('connection', (socket) => {
-    logger.info(`Client connected: ${socket.id}`);
+let io: Server;
 
-    // Join execution room for real-time updates
+export const setupWebSocket = (socketServer: Server) => {
+  io = socketServer;
+  
+  io.on('connection', (socket: Socket) => {
+    logger.info(`Client connected: ${socket.id}`);
+    
+    // Join execution room
     socket.on('join-execution', (executionId: string) => {
       socket.join(`execution-${executionId}`);
       logger.info(`Client ${socket.id} joined execution room: ${executionId}`);
     });
-
-    // Join target room for target-specific updates
+    
+    // Join target room
     socket.on('join-target', (targetId: string) => {
       socket.join(`target-${targetId}`);
       logger.info(`Client ${socket.id} joined target room: ${targetId}`);
     });
-
-    // Handle disconnection
+    
+    // Leave execution room
+    socket.on('leave-execution', (executionId: string) => {
+      socket.leave(`execution-${executionId}`);
+      logger.info(`Client ${socket.id} left execution room: ${executionId}`);
+    });
+    
+    // Leave target room
+    socket.on('leave-target', (targetId: string) => {
+      socket.leave(`target-${targetId}`);
+      logger.info(`Client ${socket.id} left target room: ${targetId}`);
+    });
+    
     socket.on('disconnect', () => {
       logger.info(`Client disconnected: ${socket.id}`);
     });
-
-    // Handle errors
-    socket.on('error', (error) => {
-      logger.error(`Socket error for ${socket.id}:`, error);
-    });
   });
-
-  // Make io available globally for emitting events
-  (global as any).io = io;
-
-  logger.info('WebSocket server setup complete');
+  
+  logger.info('WebSocket server initialized');
 };
 
 // Utility functions for emitting events
 export const emitExecutionUpdate = (executionId: string, data: any) => {
-  const io = (global as any).io;
   if (io) {
     io.to(`execution-${executionId}`).emit('execution-update', data);
-    logger.debug(`Emitted execution update for ${executionId}:`, data);
   }
 };
 
-export const emitTaskUpdate = (executionId: string, taskId: string, data: any) => {
-  const io = (global as any).io;
+export const emitTaskUpdate = (executionId: string, data: any) => {
   if (io) {
-    io.to(`execution-${executionId}`).emit('task-update', {
-      taskId,
-      ...data
-    });
-    logger.debug(`Emitted task update for ${taskId}:`, data);
+    io.to(`execution-${executionId}`).emit('task-update', data);
   }
 };
 
-export const emitTargetUpdate = (targetId: string, data: any) => {
-  const io = (global as any).io;
+export const emitTargetUpdate = (event: string, data: any) => {
   if (io) {
-    io.to(`target-${targetId}`).emit('target-update', data);
-    logger.debug(`Emitted target update for ${targetId}:`, data);
+    io.emit('target-update', { event, data });
   }
 };
 
-export const emitVulnerabilityFound = (targetId: string, vulnerability: any) => {
-  const io = (global as any).io;
+export const emitVulnerabilityFound = (targetId: string, data: any) => {
   if (io) {
-    io.to(`target-${targetId}`).emit('vulnerability-found', vulnerability);
-    logger.info(`Emitted vulnerability found for ${targetId}:`, vulnerability);
+    io.to(`target-${targetId}`).emit('vulnerability-found', data);
   }
 };
 
 export const emitProgressUpdate = (executionId: string, progress: number) => {
-  const io = (global as any).io;
   if (io) {
     io.to(`execution-${executionId}`).emit('progress-update', { progress });
-    logger.debug(`Emitted progress update for ${executionId}: ${progress}%`);
   }
 };
 
-export const emitLogMessage = (executionId: string, message: string, level: 'info' | 'warn' | 'error' = 'info') => {
-  const io = (global as any).io;
+export const emitLogMessage = (executionId: string, message: string, level: string = 'info') => {
   if (io) {
-    io.to(`execution-${executionId}`).emit('log-message', {
-      message,
-      level,
-      timestamp: new Date().toISOString()
-    });
-    logger.debug(`Emitted log message for ${executionId}: ${message}`);
+    io.to(`execution-${executionId}`).emit('log-message', { message, level, timestamp: new Date().toISOString() });
   }
 };
-
-export default setupWebSocket;

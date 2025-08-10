@@ -1,57 +1,32 @@
-import { Router } from 'express';
+import express from 'express';
 import { prisma } from '../index';
 import { logger } from '../utils/logger';
+import { addExecutionJob } from '../services/queue';
+import { emitExecutionUpdate } from '../services/websocket';
 import { createError } from '../middleware/errorHandler';
-import { emitExecutionUpdate, emitProgressUpdate } from '../services/websocket';
-import { addExecutionJob, JOB_TYPES } from '../services/queue';
 
-const router = Router();
+const router = express.Router();
 
 // Get all executions
 router.get('/', async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, status, targetId, mode } = req.query;
-    
-    const skip = (Number(page) - 1) * Number(limit);
-    const take = Number(limit);
+    const { page = 1, limit = 50, status, targetId, mode } = req.query;
+    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
 
     const where: any = {};
-    
-    if (status) {
-      where.status = status;
-    }
-    
-    if (targetId) {
-      where.targetId = targetId;
-    }
-    
-    if (mode) {
-      where.mode = mode;
-    }
+    if (status) where.status = status;
+    if (targetId) where.targetId = targetId;
+    if (mode) where.mode = mode;
 
     const [executions, total] = await Promise.all([
       prisma.execution.findMany({
         where,
         skip,
-        take,
+        take: parseInt(limit as string),
         orderBy: { createdAt: 'desc' },
         include: {
           target: {
-            select: {
-              id: true,
-              domain: true,
-              name: true
-            }
-          },
-          tasks: {
-            orderBy: { createdAt: 'desc' },
-            take: 5
-          },
-          _count: {
-            select: {
-              tasks: true,
-              artifacts: true
-            }
+            select: { id: true, domain: true, name: true }
           }
         }
       }),
@@ -59,13 +34,12 @@ router.get('/', async (req, res, next) => {
     ]);
 
     res.json({
-      success: true,
-      data: executions,
+      executions,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
         total,
-        pages: Math.ceil(total / Number(limit))
+        pages: Math.ceil(total / parseInt(limit as string))
       }
     });
   } catch (error) {
@@ -81,19 +55,9 @@ router.get('/:id', async (req, res, next) => {
     const execution = await prisma.execution.findUnique({
       where: { id },
       include: {
-        target: {
-          select: {
-            id: true,
-            domain: true,
-            name: true,
-            description: true
-          }
-        },
+        target: true,
         tasks: {
           orderBy: { createdAt: 'asc' }
-        },
-        artifacts: {
-          orderBy: { createdAt: 'desc' }
         }
       }
     });
@@ -102,10 +66,7 @@ router.get('/:id', async (req, res, next) => {
       throw createError('Execution not found', 404);
     }
 
-    res.json({
-      success: true,
-      data: execution
-    });
+    res.json(execution);
   } catch (error) {
     next(error);
   }
@@ -114,13 +75,13 @@ router.get('/:id', async (req, res, next) => {
 // Create new execution
 router.post('/', async (req, res, next) => {
   try {
-    const { targetId, mode, tools, metadata } = req.body;
+    const { targetId, mode, tools } = req.body;
 
-    if (!targetId || !mode || !tools) {
-      throw createError('Target ID, mode, and tools are required', 400);
+    if (!targetId || !mode) {
+      throw createError('Target ID and mode are required', 400);
     }
 
-    // Validate target exists
+    // Check if target exists
     const target = await prisma.target.findUnique({
       where: { id: targetId }
     });
@@ -133,7 +94,7 @@ router.post('/', async (req, res, next) => {
     const activeExecution = await prisma.execution.findFirst({
       where: {
         targetId,
-        status: { in: ['PENDING', 'RUNNING'] }
+        status: { in: ['PENDING', 'RUNNING', 'PAUSED'] }
       }
     });
 
@@ -141,48 +102,32 @@ router.post('/', async (req, res, next) => {
       throw createError('Target already has an active execution', 409);
     }
 
-    // Create execution
+    // Create execution record
     const execution = await prisma.execution.create({
       data: {
         targetId,
         mode,
-        tools: JSON.stringify(tools),
-        metadata: metadata ? JSON.stringify(metadata) : null
+        metadata: JSON.stringify({ tools })
       },
       include: {
         target: {
-          select: {
-            id: true,
-            domain: true,
-            name: true
-          }
+          select: { id: true, domain: true, name: true }
         }
       }
     });
 
-    logger.info(`Created new execution for target: ${target.domain}`);
-
     // Add execution job to queue
-    await addExecutionJob(JOB_TYPES.EXECUTION.START, {
+    await addExecutionJob('start-execution', {
       executionId: execution.id,
       targetId,
       mode,
-      tools,
-      metadata
-    }, {
-      jobId: `execution-${execution.id}`
+      tools
     });
 
-    // Emit WebSocket update
-    emitExecutionUpdate(execution.id, {
-      type: 'execution-created',
-      execution
-    });
+    logger.info(`Created new execution: ${execution.id} for target: ${target.domain}`);
+    emitExecutionUpdate(execution.id, { type: 'execution-created', execution });
 
-    res.status(201).json({
-      success: true,
-      data: execution
-    });
+    res.status(201).json(execution);
   } catch (error) {
     next(error);
   }
@@ -205,28 +150,14 @@ router.post('/:id/pause', async (req, res, next) => {
       throw createError('Execution is not running', 400);
     }
 
-    const updatedExecution = await prisma.execution.update({
+    await prisma.execution.update({
       where: { id },
       data: { status: 'PAUSED' }
     });
 
-    // Add pause job to queue
-    await addExecutionJob(JOB_TYPES.EXECUTION.PAUSE, {
-      executionId: id
-    });
+    emitExecutionUpdate(id, { type: 'execution-paused', executionId: id });
 
-    logger.info(`Paused execution: ${id}`);
-
-    // Emit WebSocket update
-    emitExecutionUpdate(id, {
-      type: 'execution-paused',
-      execution: updatedExecution
-    });
-
-    res.json({
-      success: true,
-      data: updatedExecution
-    });
+    res.json({ message: 'Execution paused successfully' });
   } catch (error) {
     next(error);
   }
@@ -249,28 +180,14 @@ router.post('/:id/resume', async (req, res, next) => {
       throw createError('Execution is not paused', 400);
     }
 
-    const updatedExecution = await prisma.execution.update({
+    await prisma.execution.update({
       where: { id },
       data: { status: 'RUNNING' }
     });
 
-    // Add resume job to queue
-    await addExecutionJob(JOB_TYPES.EXECUTION.RESUME, {
-      executionId: id
-    });
+    emitExecutionUpdate(id, { type: 'execution-resumed', executionId: id });
 
-    logger.info(`Resumed execution: ${id}`);
-
-    // Emit WebSocket update
-    emitExecutionUpdate(id, {
-      type: 'execution-resumed',
-      execution: updatedExecution
-    });
-
-    res.json({
-      success: true,
-      data: updatedExecution
-    });
+    res.json({ message: 'Execution resumed successfully' });
   } catch (error) {
     next(error);
   }
@@ -289,11 +206,11 @@ router.post('/:id/stop', async (req, res, next) => {
       throw createError('Execution not found', 404);
     }
 
-    if (!['PENDING', 'RUNNING', 'PAUSED'].includes(execution.status)) {
-      throw createError('Execution cannot be stopped', 400);
+    if (!['RUNNING', 'PAUSED'].includes(execution.status)) {
+      throw createError('Execution is not active', 400);
     }
 
-    const updatedExecution = await prisma.execution.update({
+    await prisma.execution.update({
       where: { id },
       data: { 
         status: 'CANCELLED',
@@ -301,113 +218,9 @@ router.post('/:id/stop', async (req, res, next) => {
       }
     });
 
-    // Add stop job to queue
-    await addExecutionJob(JOB_TYPES.EXECUTION.STOP, {
-      executionId: id
-    });
+    emitExecutionUpdate(id, { type: 'execution-stopped', executionId: id });
 
-    logger.info(`Stopped execution: ${id}`);
-
-    // Emit WebSocket update
-    emitExecutionUpdate(id, {
-      type: 'execution-stopped',
-      execution: updatedExecution
-    });
-
-    res.json({
-      success: true,
-      data: updatedExecution
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get execution logs
-router.get('/:id/logs', async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { page = 1, limit = 50 } = req.query;
-
-    const execution = await prisma.execution.findUnique({
-      where: { id }
-    });
-
-    if (!execution) {
-      throw createError('Execution not found', 404);
-    }
-
-    // Get tasks with their outputs (logs)
-    const tasks = await prisma.task.findMany({
-      where: { executionId: id },
-      select: {
-        id: true,
-        tool: true,
-        status: true,
-        output: true,
-        error: true,
-        startedAt: true,
-        completedAt: true
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    res.json({
-      success: true,
-      data: {
-        execution,
-        tasks
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get execution progress
-router.get('/:id/progress', async (req, res, next) => {
-  try {
-    const { id } = req.params;
-
-    const execution = await prisma.execution.findUnique({
-      where: { id },
-      include: {
-        tasks: {
-          select: {
-            id: true,
-            tool: true,
-            status: true,
-            progress: true
-          }
-        }
-      }
-    });
-
-    if (!execution) {
-      throw createError('Execution not found', 404);
-    }
-
-    const totalTasks = execution.tasks.length;
-    const completedTasks = execution.tasks.filter(task => 
-      ['COMPLETED', 'FAILED', 'SKIPPED'].includes(task.status)
-    ).length;
-    const runningTasks = execution.tasks.filter(task => 
-      task.status === 'RUNNING'
-    ).length;
-
-    const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
-
-    res.json({
-      success: true,
-      data: {
-        executionId: id,
-        progress: Math.round(progress),
-        totalTasks,
-        completedTasks,
-        runningTasks,
-        tasks: execution.tasks
-      }
-    });
+    res.json({ message: 'Execution stopped successfully' });
   } catch (error) {
     next(error);
   }

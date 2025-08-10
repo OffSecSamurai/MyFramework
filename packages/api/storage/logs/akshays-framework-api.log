@@ -1,0 +1,19 @@
+{"level":"info","message":"WebSocket server initialized","service":"akshays-framework-api","timestamp":"2025-08-10 11:07:41"}
+{"level":"info","message":"BullMQ queues initialized","service":"akshays-framework-api","timestamp":"2025-08-10 11:07:41"}
+{"level":"info","message":"🚀 Akshay's Framework API server running on http://0.0.0.0:3001","service":"akshays-framework-api","timestamp":"2025-08-10 11:07:41"}
+{"level":"info","message":"📊 Health check available at http://0.0.0.0:3001/health","service":"akshays-framework-api","timestamp":"2025-08-10 11:07:41"}
+{"level":"info","message":"127.0.0.1 - - [10/Aug/2025:11:07:43 +0000] \"GET /health HTTP/1.1\" 200 80 \"-\" \"curl/8.12.1\"","service":"akshays-framework-api","timestamp":"2025-08-10 11:07:43"}
+{"level":"info","message":"127.0.0.1 - - [10/Aug/2025:11:07:54 +0000] \"GET /health HTTP/1.1\" 200 81 \"-\" \"curl/8.12.1\"","service":"akshays-framework-api","timestamp":"2025-08-10 11:07:54"}
+{"level":"info","message":"Received SIGTERM. Starting graceful shutdown...","service":"akshays-framework-api","timestamp":"2025-08-10 11:08:17"}
+{"level":"info","message":"WebSocket server initialized","service":"akshays-framework-api","timestamp":"2025-08-10 11:08:22"}
+{"level":"info","message":"BullMQ queues initialized","service":"akshays-framework-api","timestamp":"2025-08-10 11:08:22"}
+{"level":"info","message":"🚀 Akshay's Framework API server running on http://0.0.0.0:3001","service":"akshays-framework-api","timestamp":"2025-08-10 11:08:22"}
+{"level":"info","message":"📊 Health check available at http://0.0.0.0:3001/health","service":"akshays-framework-api","timestamp":"2025-08-10 11:08:22"}
+{"level":"info","message":"127.0.0.1 - - [10/Aug/2025:11:08:31 +0000] \"GET /health HTTP/1.1\" 200 80 \"-\" \"curl/8.12.1\"","service":"akshays-framework-api","timestamp":"2025-08-10 11:08:31"}
+{"level":"info","message":"Received SIGTERM. Starting graceful shutdown...","service":"akshays-framework-api","timestamp":"2025-08-10 11:24:13"}
+{"level":"info","message":"WebSocket server initialized","service":"akshays-framework-api","timestamp":"2025-08-10 11:24:14"}
+{"level":"info","message":"BullMQ queues initialized","service":"akshays-framework-api","timestamp":"2025-08-10 11:24:14"}
+{"level":"info","message":"🚀 Akshay's Framework API server running on http://0.0.0.0:3001","service":"akshays-framework-api","timestamp":"2025-08-10 11:24:14"}
+{"level":"info","message":"📊 Health check available at http://0.0.0.0:3001/health","service":"akshays-framework-api","timestamp":"2025-08-10 11:24:14"}
+{"level":"info","message":"WebSocket server initialized","service":"akshays-framework-api","timestamp":"2025-08-10 11:24:14"}
+{"level":"info","message":"127.0.0.1 - - [10/Aug/2025:11:24:16 +0000] \"GET /health HTTP/1.1\" 200 80 \"-\" \"curl/8.12.1\"","service":"akshays-framework-api","timestamp":"2025-08-10 11:24:16"}

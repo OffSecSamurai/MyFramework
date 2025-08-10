@@ -7,9 +7,10 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\" \"npm run dev:worker\"",
     "dev:api": "cd packages/api && npm run dev",
     "dev:web": "cd packages/web && npm run dev",
+    "dev:worker": "cd packages/worker && npm run dev",
     "build": "npm run build:api && npm run build:web && npm run build:worker",
     "build:api": "cd packages/api && npm run build",
     "build:web": "cd packages/web && npm run build",

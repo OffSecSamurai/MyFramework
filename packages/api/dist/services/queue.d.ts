@@ -1,4 +1,6 @@
 import { Queue } from 'bullmq';
+import { Redis } from 'ioredis';
+declare const redis: Redis;
 export declare const QUEUE_NAMES: {
     readonly EXECUTION: "execution";
     readonly TASK: "task";
@@ -22,37 +24,18 @@ export declare const JOB_TYPES: {
 export declare const executionQueue: Queue<any, any, string, any, any, string>;
 export declare const taskQueue: Queue<any, any, string, any, any, string>;
 export declare const reportQueue: Queue<any, any, string, any, any, string>;
-export declare const executionScheduler: any;
-export declare const taskScheduler: any;
-export declare const addExecutionJob: (type: string, data: any, options?: {
-    delay?: number;
-    priority?: number;
-    jobId?: string;
-}) => Promise<import("bullmq").Job<any, any, string>>;
-export declare const addTaskJob: (type: string, data: any, options?: {
-    delay?: number;
-    priority?: number;
-    jobId?: string;
-}) => Promise<import("bullmq").Job<any, any, string>>;
-export declare const addReportJob: (type: string, data: any, options?: {
-    delay?: number;
-    priority?: number;
-    jobId?: string;
-}) => Promise<import("bullmq").Job<any, any, string>>;
-export declare const getQueueStats: () => Promise<{
-    execution: {
-        [index: string]: number;
-    };
-    task: {
-        [index: string]: number;
-    };
-    report: {
-        [index: string]: number;
-    };
-}>;
+export declare const addExecutionJob: (type: string, data: any, options?: any) => Promise<import("bullmq").Job<any, any, string>>;
+export declare const addTaskJob: (type: string, data: any, options?: any) => Promise<import("bullmq").Job<any, any, string>>;
+export declare const addReportJob: (type: string, data: any, options?: any) => Promise<import("bullmq").Job<any, any, string>>;
 export declare const pauseQueue: (queueName: string) => Promise<void>;
 export declare const resumeQueue: (queueName: string) => Promise<void>;
 export declare const cleanQueue: (queueName: string, grace?: number) => Promise<void>;
+export declare const getQueueStats: (queueName: string) => Promise<{
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+}>;
 export declare const setupQueue: () => void;
-export default setupQueue;
+export { redis };
 //# sourceMappingURL=queue.d.ts.map

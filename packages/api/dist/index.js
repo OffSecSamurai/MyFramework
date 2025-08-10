@@ -29,7 +29,7 @@ const app = (0, express_1.default)();
 const server = (0, http_1.createServer)(app);
 const io = new socket_io_1.Server(server, {
     cors: {
-        origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+        origin: process.env['CORS_ORIGIN'] || "http://localhost:3000",
         methods: ["GET", "POST"]
     }
 });
@@ -39,7 +39,7 @@ const limiter = (0, express_rate_limit_1.default)({
 });
 app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)({
-    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+    origin: process.env['CORS_ORIGIN'] || "http://localhost:3000",
     credentials: true
 }));
 app.use((0, compression_1.default)());
@@ -47,7 +47,7 @@ app.use((0, morgan_1.default)('combined', { stream: { write: (message) => logger
 app.use(limiter);
 app.use(express_1.default.json({ limit: '10mb' }));
 app.use(express_1.default.urlencoded({ extended: true }));
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
     res.status(200).json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
@@ -73,8 +73,8 @@ const gracefulShutdown = async (signal) => {
 };
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-const PORT = process.env.PORT || 3001;
-const HOST = process.env.HOST || '0.0.0.0';
+const PORT = parseInt(process.env['PORT'] || '3001');
+const HOST = process.env['HOST'] || '0.0.0.0';
 server.listen(PORT, HOST, () => {
     logger_1.logger.info(`🚀 Akshay's Framework API server running on http://${HOST}:${PORT}`);
     logger_1.logger.info(`📊 Health check available at http://${HOST}:${PORT}/health`);

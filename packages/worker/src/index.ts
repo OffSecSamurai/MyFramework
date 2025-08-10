@@ -1,29 +1,57 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
 import { Worker } from 'bullmq';
 import { Redis } from 'ioredis';
-import { PrismaClient } from '@prisma/client';
-import dotenv from 'dotenv';
-import express from 'express';
 import { createServer } from 'http';
-import { logger } from './utils/logger';
+import { Server } from 'socket.io';
+import { PrismaClient } from '@prisma/client';
+
+// Import workers
 import { setupExecutionWorker } from './workers/executionWorker';
 import { setupTaskWorker } from './workers/taskWorker';
 import { setupReportWorker } from './workers/reportWorker';
 
+// Import utilities
+import { logger } from './utils/logger';
+
 // Load environment variables
+import dotenv from 'dotenv';
 dotenv.config();
 
 // Initialize Prisma
 export const prisma = new PrismaClient();
 
 // Initialize Redis
-export const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+export const redis = new Redis(process.env['REDIS_URL'] || 'redis://localhost:6379');
 
-// Create Express app for health checks
+// Create Express app
 const app = express();
 const server = createServer(app);
 
+// Initialize Socket.IO
+const io = new Server(server, {
+  cors: {
+    origin: process.env['CORS_ORIGIN'] || "http://localhost:3000",
+    methods: ["GET", "POST"]
+  }
+});
+
+// Middleware
+app.use(helmet());
+app.use(cors({
+  origin: process.env['CORS_ORIGIN'] || "http://localhost:3000",
+  credentials: true
+}));
+app.use(compression());
+app.use(morgan('combined', { stream: { write: (message) => logger.info(message.trim()) } }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.status(200).json({ 
     status: 'healthy', 
     timestamp: new Date().toISOString(),
@@ -57,129 +85,80 @@ export const JOB_TYPES = {
 
 // Create workers
 const executionWorker = new Worker(QUEUE_NAMES.EXECUTION, async (job) => {
-  logger.info(`Processing execution job: ${job.id} (${job.name})`);
-  
-  try {
-    switch (job.name) {
-      case JOB_TYPES.EXECUTION.START:
-        return await setupExecutionWorker.handleStartExecution(job.data);
-      case JOB_TYPES.EXECUTION.PAUSE:
-        return await setupExecutionWorker.handlePauseExecution(job.data);
-      case JOB_TYPES.EXECUTION.STOP:
-        return await setupExecutionWorker.handleStopExecution(job.data);
-      case JOB_TYPES.EXECUTION.RESUME:
-        return await setupExecutionWorker.handleResumeExecution(job.data);
-      default:
-        throw new Error(`Unknown execution job type: ${job.name}`);
-    }
-  } catch (error) {
-    logger.error(`Execution job ${job.id} failed:`, error);
-    throw error;
-  }
+  logger.info(`Processing execution job: ${job.id}`);
+  await setupExecutionWorker.handleJob(job);
 }, {
   connection: redis,
-  concurrency: parseInt(process.env.WORKER_CONCURRENCY || '5')
+  concurrency: parseInt(process.env['WORKER_CONCURRENCY'] || '5')
 });
 
 const taskWorker = new Worker(QUEUE_NAMES.TASK, async (job) => {
-  logger.info(`Processing task job: ${job.id} (${job.name})`);
-  
-  try {
-    switch (job.name) {
-      case JOB_TYPES.TASK.RUN_TOOL:
-        return await setupTaskWorker.handleRunTool(job.data);
-      case JOB_TYPES.TASK.PROCESS_RESULT:
-        return await setupTaskWorker.handleProcessResult(job.data);
-      default:
-        throw new Error(`Unknown task job type: ${job.name}`);
-    }
-  } catch (error) {
-    logger.error(`Task job ${job.id} failed:`, error);
-    throw error;
-  }
+  logger.info(`Processing task job: ${job.id}`);
+  await setupTaskWorker.handleJob(job);
 }, {
   connection: redis,
-  concurrency: parseInt(process.env.WORKER_CONCURRENCY || '5')
+  concurrency: parseInt(process.env['WORKER_CONCURRENCY'] || '5')
 });
 
 const reportWorker = new Worker(QUEUE_NAMES.REPORT, async (job) => {
-  logger.info(`Processing report job: ${job.id} (${job.name})`);
-  
-  try {
-    switch (job.name) {
-      case JOB_TYPES.REPORT.GENERATE:
-        return await setupReportWorker.handleGenerateReport(job.data);
-      default:
-        throw new Error(`Unknown report job type: ${job.name}`);
-    }
-  } catch (error) {
-    logger.error(`Report job ${job.id} failed:`, error);
-    throw error;
-  }
+  logger.info(`Processing report job: ${job.id}`);
+  await setupReportWorker.handleJob(job);
 }, {
   connection: redis,
   concurrency: 2
 });
 
 // Worker event handlers
-executionWorker.on('completed', (job) => {
-  logger.info(`Execution job ${job.id} completed successfully`);
+executionWorker.on('completed' as any, (job: any) => {
+  logger.info(`Execution job ${job?.id} completed successfully`);
 });
 
-executionWorker.on('failed', (job, err) => {
-  logger.error(`Execution job ${job.id} failed:`, err);
+executionWorker.on('failed' as any, (job: any, err: any) => {
+  logger.error(`Execution job ${job?.id} failed:`, err);
 });
 
-taskWorker.on('completed', (job) => {
-  logger.info(`Task job ${job.id} completed successfully`);
+taskWorker.on('completed' as any, (job: any) => {
+  logger.info(`Task job ${job?.id} completed successfully`);
 });
 
-taskWorker.on('failed', (job, err) => {
-  logger.error(`Task job ${job.id} failed:`, err);
+taskWorker.on('failed' as any, (job: any, err: any) => {
+  logger.error(`Task job ${job?.id} failed:`, err);
 });
 
-reportWorker.on('completed', (job) => {
-  logger.info(`Report job ${job.id} completed successfully`);
+reportWorker.on('completed' as any, (job: any) => {
+  logger.info(`Report job ${job?.id} completed successfully`);
 });
 
-reportWorker.on('failed', (job, err) => {
-  logger.error(`Report job ${job.id} failed:`, err);
+reportWorker.on('failed' as any, (job: any, err: any) => {
+  logger.error(`Report job ${job?.id} failed:`, err);
 });
 
 // Graceful shutdown
 const gracefulShutdown = async (signal: string) => {
   logger.info(`Received ${signal}. Starting graceful shutdown...`);
   
-  await executionWorker.close();
-  await taskWorker.close();
-  await reportWorker.close();
-  
-  await prisma.$disconnect();
-  logger.info('Database connection closed');
-  
-  await redis.quit();
-  logger.info('Redis connection closed');
-  
   server.close(() => {
     logger.info('HTTP server closed');
   });
   
+  await executionWorker.close();
+  await taskWorker.close();
+  await reportWorker.close();
+  await redis.disconnect();
+  await prisma.$disconnect();
+  
+  logger.info('Workers, Redis, and database connections closed');
   process.exit(0);
 };
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-// Start HTTP server for health checks
-const PORT = process.env.WORKER_PORT || 3002;
-const HOST = process.env.WORKER_HOST || '0.0.0.0';
+// Start server
+const PORT = parseInt(process.env['WORKER_PORT'] || '3002');
+const HOST = process.env['WORKER_HOST'] || '0.0.0.0';
 
 server.listen(PORT, HOST, () => {
-  logger.info(`🚀 Akshay's Framework Worker started on http://${HOST}:${PORT}`);
+  logger.info(`🚀 Akshay's Framework Worker running on http://${HOST}:${PORT}`);
   logger.info(`📊 Health check available at http://${HOST}:${PORT}/health`);
-  logger.info(`📊 Execution worker concurrency: ${executionWorker.concurrency}`);
-  logger.info(`📊 Task worker concurrency: ${taskWorker.concurrency}`);
-  logger.info(`📊 Report worker concurrency: ${reportWorker.concurrency}`);
 });
-
-export { executionWorker, taskWorker, reportWorker };

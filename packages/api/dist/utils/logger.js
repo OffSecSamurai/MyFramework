@@ -3,11 +3,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logStream = exports.logger = void 0;
+exports.stream = exports.logger = void 0;
 const winston_1 = __importDefault(require("winston"));
-const winston_daily_rotate_file_1 = __importDefault(require("winston-daily-rotate-file"));
 const path_1 = __importDefault(require("path"));
-const logsDir = process.env.LOG_FILE ? path_1.default.dirname(process.env.LOG_FILE) : './storage/logs';
+const logsDir = process.env['LOG_FILE'] ? path_1.default.dirname(process.env['LOG_FILE']) : './storage/logs';
 const logFormat = winston_1.default.format.combine(winston_1.default.format.timestamp({
     format: 'YYYY-MM-DD HH:mm:ss'
 }), winston_1.default.format.errors({ stack: true }), winston_1.default.format.json());
@@ -21,51 +20,35 @@ const consoleFormat = winston_1.default.format.combine(winston_1.default.format.
     return msg;
 }));
 exports.logger = winston_1.default.createLogger({
-    level: process.env.LOG_LEVEL || 'info',
+    level: process.env['LOG_LEVEL'] || 'info',
     format: logFormat,
     defaultMeta: { service: 'akshays-framework-api' },
     transports: [
         new winston_1.default.transports.Console({
             format: consoleFormat,
-            level: process.env.NODE_ENV === 'production' ? 'warn' : 'debug'
+            level: process.env['NODE_ENV'] === 'production' ? 'warn' : 'debug'
         }),
-        new winston_daily_rotate_file_1.default({
-            filename: path_1.default.join(logsDir, 'akshays-framework-%DATE%.log'),
-            datePattern: 'YYYY-MM-DD',
-            zippedArchive: true,
-            maxSize: '20m',
-            maxFiles: '14d',
+        new winston_1.default.transports.File({
+            filename: path_1.default.join(logsDir, 'akshays-framework-api.log'),
             level: 'info'
         }),
-        new winston_daily_rotate_file_1.default({
-            filename: path_1.default.join(logsDir, 'akshays-framework-error-%DATE%.log'),
-            datePattern: 'YYYY-MM-DD',
-            zippedArchive: true,
-            maxSize: '20m',
-            maxFiles: '30d',
+        new winston_1.default.transports.File({
+            filename: path_1.default.join(logsDir, 'akshays-framework-api-error.log'),
             level: 'error'
         })
     ],
     exceptionHandlers: [
-        new winston_daily_rotate_file_1.default({
-            filename: path_1.default.join(logsDir, 'akshays-framework-exception-%DATE%.log'),
-            datePattern: 'YYYY-MM-DD',
-            zippedArchive: true,
-            maxSize: '20m',
-            maxFiles: '30d'
+        new winston_1.default.transports.File({
+            filename: path_1.default.join(logsDir, 'akshays-framework-api-exception.log')
         })
     ],
     rejectionHandlers: [
-        new winston_daily_rotate_file_1.default({
-            filename: path_1.default.join(logsDir, 'akshays-framework-rejection-%DATE%.log'),
-            datePattern: 'YYYY-MM-DD',
-            zippedArchive: true,
-            maxSize: '20m',
-            maxFiles: '30d'
+        new winston_1.default.transports.File({
+            filename: path_1.default.join(logsDir, 'akshays-framework-api-rejection.log')
         })
     ]
 });
-exports.logStream = {
+exports.stream = {
     write: (message) => {
         exports.logger.info(message.trim());
     }

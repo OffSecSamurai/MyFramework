@@ -37,7 +37,7 @@ const server = createServer(app);
 // Initialize Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+    origin: process.env['CORS_ORIGIN'] || "http://localhost:3000",
     methods: ["GET", "POST"]
   }
 });
@@ -51,7 +51,7 @@ const limiter = rateLimit({
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+  origin: process.env['CORS_ORIGIN'] || "http://localhost:3000",
   credentials: true
 }));
 app.use(compression());
@@ -61,7 +61,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.status(200).json({ 
     status: 'healthy', 
     timestamp: new Date().toISOString(),
@@ -103,8 +103,8 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Start server
-const PORT = process.env.PORT || 3001;
-const HOST = process.env.HOST || '0.0.0.0';
+const PORT = parseInt(process.env['PORT'] || '3001');
+const HOST = process.env['HOST'] || '0.0.0.0';
 
 server.listen(PORT, HOST, () => {
   logger.info(`🚀 Akshay's Framework API server running on http://${HOST}:${PORT}`);

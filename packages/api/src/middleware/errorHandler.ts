@@ -6,83 +6,6 @@ export interface AppError extends Error {
   isOperational?: boolean;
 }
 
-export const errorHandler = (
-  err: AppError,
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  let error = { ...err };
-  error.message = err.message;
-
-  // Log error
-  logger.error('Error occurred:', {
-    error: err.message,
-    stack: err.stack,
-    url: req.url,
-    method: req.method,
-    ip: req.ip,
-    userAgent: req.get('User-Agent')
-  });
-
-  // Mongoose bad ObjectId
-  if (err.name === 'CastError') {
-    const message = 'Resource not found';
-    error = { ...error, message, statusCode: 404 };
-  }
-
-  // Mongoose duplicate key
-  if (err.name === 'MongoError' && (err as any).code === 11000) {
-    const message = 'Duplicate field value entered';
-    error = { ...error, message, statusCode: 400 };
-  }
-
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    const message = Object.values((err as any).errors).map((val: any) => val.message).join(', ');
-    error = { ...error, message, statusCode: 400 };
-  }
-
-  // Prisma errors
-  if (err.name === 'PrismaClientKnownRequestError') {
-    const prismaError = err as any;
-    switch (prismaError.code) {
-      case 'P2002':
-        error = { ...error, message: 'Duplicate field value entered', statusCode: 400 };
-        break;
-      case 'P2025':
-        error = { ...error, message: 'Resource not found', statusCode: 404 };
-        break;
-      case 'P2003':
-        error = { ...error, message: 'Foreign key constraint failed', statusCode: 400 };
-        break;
-      default:
-        error = { ...error, message: 'Database operation failed', statusCode: 500 };
-    }
-  }
-
-  // JWT errors
-  if (err.name === 'JsonWebTokenError') {
-    const message = 'Invalid token';
-    error = { ...error, message, statusCode: 401 };
-  }
-
-  if (err.name === 'TokenExpiredError') {
-    const message = 'Token expired';
-    error = { ...error, message, statusCode: 401 };
-  }
-
-  // Default error
-  const statusCode = error.statusCode || 500;
-  const message = error.message || 'Server Error';
-
-  res.status(statusCode).json({
-    success: false,
-    error: message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
-};
-
 export const createError = (message: string, statusCode: number = 500): AppError => {
   const error = new Error(message) as AppError;
   error.statusCode = statusCode;
@@ -90,4 +13,45 @@ export const createError = (message: string, statusCode: number = 500): AppError
   return error;
 };
 
-export default errorHandler;
+export const errorHandler = (
+  err: AppError,
+  _req: Request,
+  res: Response,
+  _next: NextFunction
+) => {
+  let { statusCode = 500, message } = err;
+
+  // Log error
+  logger.error('Error occurred:', {
+    error: err.message,
+    stack: err.stack,
+    statusCode,
+    url: _req.url,
+    method: _req.method,
+    ip: _req.ip
+  });
+
+  // Handle specific error types
+  if (err.name === 'PrismaClientKnownRequestError') {
+    statusCode = 400;
+    message = 'Database operation failed';
+  } else if (err.name === 'PrismaClientValidationError') {
+    statusCode = 400;
+    message = 'Validation error';
+  } else if (err.name === 'JsonWebTokenError') {
+    statusCode = 401;
+    message = 'Invalid token';
+  } else if (err.name === 'TokenExpiredError') {
+    statusCode = 401;
+    message = 'Token expired';
+  }
+
+  // Send error response
+  res.status(statusCode).json({
+    error: {
+      message: message || 'Internal server error',
+      statusCode,
+      ...(process.env['NODE_ENV'] === 'development' && { stack: err.stack })
+    }
+  });
+};

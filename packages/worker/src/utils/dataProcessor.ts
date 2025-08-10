@@ -34,54 +34,54 @@ export class DataProcessor {
 
   async processSubdomainResults(target: string, rawData: string[]): Promise<string[]> {
     logger.info(`Processing subdomain results for ${target}`);
-    
+
     const cleaned = this.cleanSubdomains(rawData);
     const deduplicated = this.deduplicateSubdomains(cleaned);
     const validated = this.validateSubdomains(deduplicated);
-    
+
     logger.info(`Subdomain processing: ${rawData.length} → ${cleaned.length} → ${deduplicated.length} → ${validated.length}`);
-    
+
     return validated;
   }
 
   async processLiveHosts(target: string, rawData: string[]): Promise<string[]> {
     logger.info(`Processing live hosts for ${target}`);
-    
+
     const cleaned = this.cleanLiveHosts(rawData);
     const deduplicated = this.deduplicateHosts(cleaned);
     const validated = this.validateLiveHosts(deduplicated);
-    
+
     logger.info(`Live host processing: ${rawData.length} → ${cleaned.length} → ${deduplicated.length} → ${validated.length}`);
-    
+
     return validated;
   }
 
   async processLiveUrls(target: string, rawData: string[]): Promise<string[]> {
     logger.info(`Processing live URLs for ${target}`);
-    
+
     const cleaned = this.cleanUrls(rawData);
     const deduplicated = this.deduplicateUrls(cleaned);
     const validated = this.validateUrls(deduplicated);
-    
+
     logger.info(`Live URL processing: ${rawData.length} → ${cleaned.length} → ${deduplicated.length} → ${validated.length}`);
-    
+
     return validated;
   }
 
   async processVulnerabilities(target: string, rawData: any[]): Promise<any[]> {
     logger.info(`Processing vulnerabilities for ${target}`);
-    
+
     const cleaned = this.cleanVulnerabilities(rawData);
     const deduplicated = this.deduplicateVulnerabilities(cleaned);
     const enriched = this.enrichVulnerabilities(deduplicated);
-    
+
     logger.info(`Vulnerability processing: ${rawData.length} → ${cleaned.length} → ${deduplicated.length} → ${enriched.length}`);
-    
+
     return enriched;
   }
 
   async saveProcessedData(target: string, data: ProcessedData): Promise<void> {
-    const storagePath = path.join(process.env.STORAGE_PATH || './storage', 'processed', target);
+    const storagePath = path.join(process.env['STORAGE_PATH'] || './storage', 'processed', target);
     await fs.ensureDir(storagePath);
 
     // Save processed data as JSON
@@ -102,8 +102,8 @@ export class DataProcessor {
       return this.processedData.get(target)!;
     }
 
-    const storagePath = path.join(process.env.STORAGE_PATH || './storage', 'processed', target, 'processed_data.json');
-    
+    const storagePath = path.join(process.env['STORAGE_PATH'] || './storage', 'processed', target, 'processed_data.json');
+
     if (await fs.pathExists(storagePath)) {
       const data = await fs.readJson(storagePath);
       this.processedData.set(target, data);
@@ -176,10 +176,8 @@ export class DataProcessor {
           item = 'https://' + item;
         }
         // Remove fragments
-        item = item.split('#')[0];
-        // Remove query parameters (optional)
-        // item = item.split('?')[0];
-        return item;
+        const cleanItem = item.split('#')[0];
+        return cleanItem;
       })
       .filter(item => this.isValidUrl(item));
   }
@@ -261,7 +259,7 @@ export class DataProcessor {
       'info': 'INFO',
       'information': 'INFO'
     };
-    
+
     return severityMap[severity?.toLowerCase()] || 'INFO';
   }
 
@@ -279,33 +277,33 @@ export class DataProcessor {
       'LOW': 2,
       'INFO': 1
     };
-    
-    let score = severityScores[vuln.severity] || 1;
-    
+
+    let score = severityScores[vuln.severity as keyof typeof severityScores] || 1;
+
     // Bonus for CVE
     if (vuln.cve) score += 2;
-    
+
     // Bonus for CWE
     if (vuln.cwe) score += 1;
-    
+
     return Math.min(score, 10);
   }
 
   private generateTags(vuln: any): string[] {
     const tags = [];
-    
+
     if (vuln.cve) tags.push('cve');
     if (vuln.cwe) tags.push('cwe');
     if (vuln.type) tags.push(vuln.type.toLowerCase());
     if (vuln.tool) tags.push(vuln.tool.toLowerCase());
-    
+
     return tags;
   }
 
   // Statistics calculation
   calculateStatistics(data: ProcessedData): ProcessedData['statistics'] {
     const vulns = data.vulnerabilities;
-    
+
     return {
       totalSubdomains: data.subdomains.length,
       uniqueSubdomains: new Set(data.subdomains).size,
