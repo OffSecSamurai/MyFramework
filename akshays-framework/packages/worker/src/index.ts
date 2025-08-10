@@ -122,9 +122,45 @@ async function stagePassiveRecon(executionId: string) {
   emitProgress(executionId, { stage: 'PASSIVE_RECON', status: 'COMPLETED' });
 }
 
+async function stageActiveRecon(executionId: string) {
+  const exec = await prisma.execution.findUnique({ where: { id: executionId } });
+  if (!exec) throw new Error('execution not found');
+  const baseDir = exec.storagePath;
+  const logFile = path.join(baseDir, 'stage2_active_recon.log');
+
+  const resolved = path.join(baseDir, 'resolved_hosts.txt');
+  const liveWithTech = path.join(baseDir, 'live_hosts_with_tech.txt');
+  const liveUrls = path.join(baseDir, 'live_urls.txt');
+  const wafReport = path.join(baseDir, 'waf_report.txt');
+
+  emitProgress(executionId, { stage: 'ACTIVE_RECON', status: 'STARTED' });
+
+  // httpx to detect tech and status on common ports
+  await runCmd('sh', ['-lc', `if [ -s ${path.basename(resolved)} ]; then httpx -l ${path.basename(resolved)} -ports 80,443,8080,8443 -threads 50 -status-code -tech-detect -o ${path.basename(liveWithTech)} -silent; fi`], baseDir, logFile);
+  await runCmd('sh', ['-lc', `if [ -f ${path.basename(liveWithTech)} ]; then cat ${path.basename(liveWithTech)} | cut -d ' ' -f 1 | sort -u > ${path.basename(liveUrls)}; fi`], baseDir, logFile);
+
+  if (await fs.pathExists(liveUrls)) {
+    await prisma.artifact.create({ data: { executionId, name: 'live_hosts_with_tech.txt', path: liveWithTech } });
+    await prisma.artifact.create({ data: { executionId, name: 'live_urls.txt', path: liveUrls } });
+  }
+
+  // wafw00f on live urls
+  await runCmd('sh', ['-lc', `if [ -s ${path.basename(liveUrls)} ]; then wafw00f -i ${path.basename(liveUrls)} -o ${path.basename(wafReport)} || true; fi`], baseDir, logFile);
+  if (await fs.pathExists(wafReport)) {
+    await prisma.artifact.create({ data: { executionId, name: 'waf_report.txt', path: wafReport } });
+  }
+
+  emitProgress(executionId, { stage: 'ACTIVE_RECON', status: 'COMPLETED' });
+}
+
 new Worker(
   'runs',
   async (job: Job) => {
+    const name = job.name;
+    if (name === 'stage2-active-recon') {
+      await stageActiveRecon((job.data as any).executionId);
+      return;
+    }
     const { executionId } = job.data as { executionId: string };
     const execution = await prisma.execution.findUnique({ where: { id: executionId } });
     if (!execution) return;
@@ -132,10 +168,8 @@ new Worker(
 
     await prisma.execution.update({ where: { id: executionId }, data: { status: 'RUNNING' } });
 
-    // Create storage directory
     await ensureDir(execution.storagePath);
 
-    // Stage 1 only; next stages require explicit confirmation via UI/API
     await stagePassiveRecon(executionId);
   },
   { connection: redisConnection, concurrency: 1 }

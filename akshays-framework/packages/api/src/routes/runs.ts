@@ -77,4 +77,18 @@ router.post('/:id/abort', async (req, res) => {
   res.json(updated);
 });
 
+router.post('/:id/advance-stage', async (req, res) => {
+  const { stage } = req.body as { stage: string };
+  const exec = await prisma.execution.findUnique({ where: { id: req.params.id } });
+  if (!exec) return res.status(404).json({ error: 'not found' });
+
+  // Only allow advancing from PASSIVE_RECON to ACTIVE_RECON for now
+  if (stage !== 'ACTIVE_RECON') return res.status(400).json({ error: 'unsupported stage transition' });
+  if (exec.currentStage !== 'PASSIVE_RECON') return res.status(400).json({ error: 'current stage is not PASSIVE_RECON' });
+
+  await prisma.execution.update({ where: { id: exec.id }, data: { currentStage: 'ACTIVE_RECON' } });
+  await runsQueue.add('stage2-active-recon', { executionId: exec.id }, { removeOnComplete: true });
+  res.json({ ok: true });
+});
+
 export default router;

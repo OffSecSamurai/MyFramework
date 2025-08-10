@@ -3,7 +3,7 @@ WORKDIR /app
 
 # Install base deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates git curl wget jq dnsutils whois nmap openssh-client build-essential \
+    ca-certificates git curl wget jq dnsutils whois nmap python3 python3-pip openssh-client build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Go toolchain
@@ -13,9 +13,11 @@ ENV PATH=$PATH:/usr/local/go/bin:/root/go/bin
 RUN wget -q https://go.dev/dl/go1.22.5.linux-amd64.tar.gz && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf go1.22.5.linux-amd64.tar.gz && rm go1.22.5.linux-amd64.tar.gz
 
-# Install recon tools (light selection for Stage 1)
+# Install recon tools (Stage 1 & 2)
 RUN go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
     go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest && \
+    go install github.com/projectdiscovery/httpx/cmd/httpx@latest && \
+    go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest && \
     go install github.com/tomnomnom/assetfinder@latest && \
     go install github.com/owasp-amass/amass/v4/...@latest || true && \
     go install github.com/projectdiscovery/chaos-client/cmd/chaos@latest || true
@@ -25,6 +27,9 @@ RUN go install github.com/tomnomnom/gf@latest && \
     mkdir -p /root/.gf && \
     git clone --depth=1 https://github.com/1ndianl33t/Gf-Patterns /tmp/Gf-Patterns && \
     cp -r /tmp/Gf-Patterns/*.json /root/.gf/ || true
+
+# WAFW00F (Python)
+RUN pip3 install --no-cache-dir wafw00f
 
 COPY package.json package-lock.json* .npmrc* ./
 COPY packages/worker/package.json ./packages/worker/
