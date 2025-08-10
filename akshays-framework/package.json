@@ -1,0 +1,30 @@
+{
+  "name": "akshays-framework",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/api",
+    "packages/web",
+    "packages/worker"
+  ],
+  "scripts": {
+    "postinstall": "prisma generate --schema=./prisma/schema.prisma",
+    "build": "npm run -w packages/web build && npm run -w packages/api build && npm run -w packages/worker build",
+    "dev": "concurrently \"npm run -w packages/api dev\" \"npm run -w packages/web dev\" \"npm run -w packages/worker dev\"",
+    "format": "prettier -w .",
+    "lint": "eslint --ext .ts,.tsx packages",
+    "compose:up": "docker compose up -d --build",
+    "compose:down": "docker compose down -v",
+    "zip": "bash ./scripts/zip.sh || pwsh -File ./scripts/zip.ps1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "eslint": "^9.7.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4",
+    "prisma": "^5.19.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
