@@ -1,0 +1,52 @@
+import express from 'express';
+import http from 'http';
+import cors from 'cors';
+import { Server } from 'socket.io';
+import dotenv from 'dotenv';
+import { Queue } from 'bullmq';
+import IORedis from 'ioredis';
+import { PrismaClient } from '@prisma/client';
+
+import targetsRouter from './routes/targets';
+import runsRouter from './routes/runs';
+import executionsRouter from './routes/executions';
+import artifactsRouter from './routes/artifacts';
+
+dotenv.config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*'
+  }
+});
+
+export const prisma = new PrismaClient();
+
+// Redis connection for BullMQ using ioredis
+const connection = new IORedis({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: parseInt(process.env.REDIS_PORT || '6379', 10)
+});
+
+export const jobQueue = new Queue('afw-jobs', { connection });
+
+// Socket.IO namespace for live updates
+io.on('connection', (socket) => {
+  console.log('Client connected', socket.id);
+  socket.on('disconnect', () => console.log('Client disconnected', socket.id));
+});
+
+app.use('/targets', targetsRouter);
+app.use('/runs', runsRouter);
+app.use('/executions', executionsRouter);
+app.use('/artifacts', artifactsRouter);
+
+const PORT = process.env.PORT || 4000;
+server.listen(PORT, () => {
+  console.log(`AFW API running on port ${PORT}`);
+});

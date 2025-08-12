@@ -1,0 +1,16 @@
+{
+  "name": "akshays-framework",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/api",
+    "packages/worker",
+    "packages/web"
+  ],
+  "scripts": {
+    "dev:api": "pnpm --filter @afw/api dev",
+    "dev:worker": "pnpm --filter @afw/worker dev",
+    "dev:web": "pnpm --filter @afw/web dev",
+    "build": "pnpm --filter @afw/api build && pnpm --filter @afw/worker build && pnpm --filter @afw/web build"
+  }
+}

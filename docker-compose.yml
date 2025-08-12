@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: afw-redis
+    restart: unless-stopped
+  api:
+    build:
+      context: .
+      dockerfile: ./packages/api/Dockerfile
+    container_name: afw-api
+    env_file: .env
+    depends_on:
+      - redis
+    ports:
+      - "${PORT:-4000}:4000"
+    volumes:
+      - ./:/workspace
+  worker:
+    build:
+      context: .
+      dockerfile: ./packages/worker/Dockerfile
+    container_name: afw-worker
+    env_file: .env
+    depends_on:
+      - redis
+    volumes:
+      - ./:/workspace
+  web:
+    build:
+      context: .
+      dockerfile: ./packages/web/Dockerfile
+    container_name: afw-web
+    env_file: .env
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-3000}:3000"
