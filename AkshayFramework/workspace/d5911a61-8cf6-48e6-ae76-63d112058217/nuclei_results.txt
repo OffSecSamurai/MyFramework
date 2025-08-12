@@ -1,0 +1,3 @@
+[HIGH] SQL Injection found at https://api.example.com/search?q=
+[MEDIUM] XSS vulnerability at https://blog.example.com/comment
+[LOW] Directory listing at https://admin.example.com/backup/

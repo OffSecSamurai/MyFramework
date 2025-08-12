@@ -1,0 +1,566 @@
+┌──(kali㉿kali)-[~/Tools/AkshayFramework]
+└─$ chmod +x install.sh                
+./install.sh
+
+
+    ╔═══════════════════════════════════════════════════════════╗                               
+    ║                                                           ║                               
+    ║              🔍 AKSHAY'S FRAMEWORK 🔍                    ║                                
+    ║                                                           ║                               
+    ║          Professional Bug Bounty Platform                ║                                
+    ║             Kali Linux Auto-Installer                    ║                                
+    ║                                                           ║                               
+    ╚═══════════════════════════════════════════════════════════╝                               
+                                                                                                
+[INFO] Starting Akshay's Framework installation...
+[SUCCESS] Kali Linux detected
+[STEP] Updating system packages...
+[sudo] password for kali: 
+Hit:1 http://http.kali.org/kali kali-rolling InRelease                                         
+Hit:2 https://ocean.surfshark.com/debian stretch InRelease                                     
+Hit:3 https://repo.protonvpn.com/debian unstable InRelease                                     
+Hit:4 https://dl.google.com/linux/chrome/deb stable InRelease       
+Hit:5 https://deb.nodesource.com/node_20.x nodistro InRelease
+All packages are up to date.    
+Warning: https://deb.nodesource.com/node_20.x/dists/nodistro/InRelease: Policy will reject signature within a year, see --audit for details
+Summary:                        
+  Upgrading: 0, Installing: 0, Removing: 0, Not Upgrading: 0
+[SUCCESS] System updated
+[STEP] Installing Node.js and npm...
+2025-08-10 06:22:10 - Installing pre-requisites
+Hit:1 http://http.kali.org/kali kali-rolling InRelease                                         
+Hit:2 https://deb.nodesource.com/node_20.x nodistro InRelease                                  
+Hit:3 https://repo.protonvpn.com/debian unstable InRelease                                
+Hit:4 https://ocean.surfshark.com/debian stretch InRelease          
+Hit:5 https://dl.google.com/linux/chrome/deb stable InRelease
+Reading package lists... Done
+W: https://deb.nodesource.com/node_20.x/dists/nodistro/InRelease: Policy will reject signature within a year, see --audit for details
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+apt-transport-https is already the newest version (3.0.3+kali1).
+ca-certificates is already the newest version (20250419).
+curl is already the newest version (8.14.1-2).
+gnupg is already the newest version (2.4.7-21).
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+gpg: WARNING: unsafe ownership on homedir '/home/kali/.gnupg'
+Hit:1 http://http.kali.org/kali kali-rolling InRelease                                         
+Hit:2 https://deb.nodesource.com/node_20.x nodistro InRelease                                  
+Hit:3 https://repo.protonvpn.com/debian unstable InRelease                                
+Hit:4 https://ocean.surfshark.com/debian stretch InRelease          
+Hit:5 https://dl.google.com/linux/chrome/deb stable InRelease       
+Reading package lists... Done
+W: https://deb.nodesource.com/node_20.x/dists/nodistro/InRelease: Policy will reject signature within a year, see --audit for details
+2025-08-10 06:22:15 - Repository configured successfully.
+2025-08-10 06:22:15 - To install Node.js, run: apt-get install nodejs -y
+2025-08-10 06:22:15 - You can use N|solid Runtime as a node.js alternative
+2025-08-10 06:22:15 - To install N|solid Runtime, run: apt-get install nsolid -y 
+                                                                                                
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+nodejs is already the newest version (20.19.4-1nodesource1).
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+[SUCCESS] Node.js v20.19.4 installed
+[SUCCESS] npm 10.8.2 installed
+[STEP] Installing security reconnaissance tools...
+Hit:1 http://http.kali.org/kali kali-rolling InRelease                                         
+Hit:2 https://deb.nodesource.com/node_20.x nodistro InRelease                                  
+Hit:3 https://ocean.surfshark.com/debian stretch InRelease                                
+Hit:4 https://repo.protonvpn.com/debian unstable InRelease          
+Hit:5 https://dl.google.com/linux/chrome/deb stable InRelease
+All packages are up to date.    
+Warning: https://deb.nodesource.com/node_20.x/dists/nodistro/InRelease: Policy will reject signature within a year, see --audit for details
+[SUCCESS] subfinder already installed
+[SUCCESS] assetfinder already installed
+[SUCCESS] findomain already installed
+[SUCCESS] amass already installed
+[SUCCESS] httpx-toolkit already installed
+[SUCCESS] nmap already installed
+[SUCCESS] nuclei already installed
+[SUCCESS] sqlmap already installed
+[SUCCESS] dirb already installed
+[SUCCESS] gobuster already installed
+[SUCCESS] wfuzz already installed
+[SUCCESS] nikto already installed
+[SUCCESS] masscan already installed
+[SUCCESS] theharvester already installed
+[SUCCESS] dnsrecon already installed
+[SUCCESS] fierce already installed
+[SUCCESS] wafw00f already installed
+[SUCCESS] whatweb already installed
+[SUCCESS] curl already installed
+[SUCCESS] wget already installed
+[SUCCESS] git already installed
+[SUCCESS] chromium already installed
+[INFO] Installing chromium-driver...
+chromium-driver is already the newest version (138.0.7204.183-1).
+Summary:
+  Upgrading: 0, Installing: 0, Removing: 0, Not Upgrading: 0
+[STEP] Installing Go-based tools...
+[SUCCESS] subfinder already installed
+[SUCCESS] assetfinder already installed
+[SUCCESS] httpx already installed
+[SUCCESS] nuclei already installed
+[SUCCESS] gau already installed
+[SUCCESS] waybackurls already installed
+[SUCCESS] katana already installed
+[SUCCESS] naabu already installed
+[SUCCESS] gau already installed
+[SUCCESS] ffuf already installed
+[INFO] Installing v3...
+[SUCCESS] chaos already installed
+[SUCCESS] hakrawler already installed
+[SUCCESS] aquatone already installed
+[SUCCESS] Security tools installation completed
+[STEP] Installing Python dependencies...
+python3-pip is already the newest version (25.1.1+dfsg-1).
+pipx is already the newest version (1.7.1-1).
+python3-venv is already the newest version (3.13.5-1).
+Summary:
+  Upgrading: 0, Installing: 0, Removing: 0, Not Upgrading: 0
+/home/kali/.local/bin is already in PATH.
+
+⚠  All pipx binary directories have been appended to PATH. If you are sure you want to
+proceed, try again with the '--force' flag.
+
+Otherwise pipx is ready to go! ✨ 🌟 ✨
+[INFO] Installing arjun using pipx...
+'arjun' already seems to be installed. Not modifying existing installation in
+'/home/kali/.local/share/pipx/venvs/arjun'. Pass '--force' to force installation.
+[INFO] Installing dirsearch using pipx...
+⚠  Note: dirsearch was already on your PATH at /usr/bin/dirsearch
+  installed package dirsearch 0.4.3.post1, installed using Python 3.13.5
+  These apps are now globally available
+    - dirsearch
+done! ✨ 🌟 ✨
+[INFO] Installing xsser using pipx...
+Fatal error from pip prevented installation. Full pip output in file:
+    /home/kali/.local/state/pipx/log/cmd_2025-08-10_06.22.37_pip_errors.log
+
+Some possibly relevant errors from pip install:
+    ERROR: Could not find a version that satisfies the requirement xsser (from versions: none)
+    ERROR: No matching distribution found for xsser
+
+Error installing xsser.
+[WARNING] Failed to install xsser with pipx
+[INFO] Installing sublist3r from Kali repositories...
+Installing:                     
+  sublist3r
+                                                                                                
+Summary:
+  Upgrading: 0, Installing: 1, Removing: 0, Not Upgrading: 0
+  Download size: 620 kB
+  Space needed: 1,944 kB / 51.1 GB available
+
+Get:1 http://kali.download/kali kali-rolling/main amd64 sublist3r all 1.1-4 [620 kB]
+Fetched 620 kB in 2s (255 kB/s)    
+Selecting previously unselected package sublist3r.
+(Reading database ... 483371 files and directories currently installed.)
+Preparing to unpack .../sublist3r_1.1-4_all.deb ...
+Unpacking sublist3r (1.1-4) ...
+Setting up sublist3r (1.1-4) ...
+/usr/lib/python3/dist-packages/subbrute/subbrute.py:374: SyntaxWarning: invalid escape sequence '\.'
+  domain_match = re.compile("([a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*)+")
+/usr/lib/python3/dist-packages/sublist3r.py:78: SyntaxWarning: invalid escape sequence '\_'
+  \___ \| | | | '_ \| | / __| __| |_ \| '__|
+/usr/lib/python3/dist-packages/sublist3r.py:287: SyntaxWarning: invalid escape sequence '\/'
+  link_regx = re.compile('<cite.*?>(.*?)<\/cite>')
+/usr/lib/python3/dist-packages/sublist3r.py:344: SyntaxWarning: invalid escape sequence '\/'
+  link = re.sub("<(\/)?b>", "", link)
+/usr/lib/python3/dist-packages/sublist3r.py:440: SyntaxWarning: invalid escape sequence '\/'
+  link = re.sub('<(\/)?strong>|<span.*?>|<|>', '', link)
+/usr/lib/python3/dist-packages/sublist3r.py:660: SyntaxWarning: invalid escape sequence '\/'
+  tbl_regex = re.compile('<a name="hostanchor"><\/a>Host Records.*?<table.*?>(.*?)</table>', re.S)
+/usr/lib/python3/dist-packages/sublist3r.py:905: SyntaxWarning: invalid escape sequence '\-'
+  domain_check = re.compile("^(http|https)?[a-zA-Z0-9]+([\-\.]{1}[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$")
+Processing triggers for kali-menu (2025.3.0) ...
+Processing triggers for man-db (2.13.1-1) ...
+Scanning processes...                                                                           
+Scanning linux images...                                                                        
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+[INFO] Installing sqlmap from Kali repositories...
+sqlmap is already the newest version (1.9.6-1).
+Summary:
+  Upgrading: 0, Installing: 0, Removing: 0, Not Upgrading: 0
+[INFO] Installing paramspider from Kali repositories...
+paramspider is already the newest version (1.0.1-3).
+Summary:
+  Upgrading: 0, Installing: 0, Removing: 0, Not Upgrading: 0
+[INFO] Creating Python virtual environment...
+Requirement already satisfied: pip in /home/kali/.akshay-venv/lib/python3.13/site-packages (25.1.1)
+Collecting pip
+  Downloading pip-25.2-py3-none-any.whl.metadata (4.7 kB)
+Downloading pip-25.2-py3-none-any.whl (1.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 3.5 MB/s eta 0:00:00
+Installing collected packages: pip
+  Attempting uninstall: pip
+    Found existing installation: pip 25.1.1
+    Uninstalling pip-25.1.1:
+      Successfully uninstalled pip-25.1.1
+Successfully installed pip-25.2
+[SUCCESS] Python dependencies installed
+[STEP] Creating application directory...
+[INFO] Already in framework directory, using current location
+[STEP] Copying application files...
+[SUCCESS] Application files copied
+[STEP] Installing Node.js dependencies...
+npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+
+added 481 packages, and audited 482 packages in 13s
+
+64 packages are looking for funding
+  run `npm fund` for details
+
+11 vulnerabilities (3 low, 8 moderate)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+[SUCCESS] Node.js dependencies installed
+[STEP] Configuring environment...
+[SUCCESS] Environment configuration created
+[STEP] Setting up PostgreSQL database...
+postgresql is already the newest version (17+264).
+postgresql set to manually installed.
+Installing:
+  postgresql-contrib
+                                                                                                
+Summary:
+  Upgrading: 0, Installing: 1, Removing: 0, Not Upgrading: 0
+  Download size: 12.2 kB
+  Space needed: 18.4 kB / 50.7 GB available
+
+Get:1 http://http.kali.org/kali kali-rolling/main amd64 postgresql-contrib all 17+264 [12.2 kB]
+Fetched 12.2 kB in 1s (8,474 B/s)             
+Selecting previously unselected package postgresql-contrib.
+(Reading database ... 483396 files and directories currently installed.)
+Preparing to unpack .../postgresql-contrib_17+264_all.deb ...
+Unpacking postgresql-contrib (17+264) ...
+Setting up postgresql-contrib (17+264) ...
+Scanning processes...                                                                           
+Scanning linux images...                                                                        
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+Synchronizing state of postgresql.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
+Executing: /usr/lib/systemd/systemd-sysv-install enable postgresql
+Created symlink '/etc/systemd/system/multi-user.target.wants/postgresql.service' → '/usr/lib/systemd/system/postgresql.service'.
+CREATE DATABASE
+CREATE ROLE
+GRANT
+ALTER ROLE
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/home/kali/Tools/AkshayFramework/drizzle.config.ts'
+Using 'pg' driver for database querying
+[✓] Pulling schema from database...
+error: permission denied for schema public
+    at /home/kali/Tools/AkshayFramework/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Object.query (/home/kali/Tools/AkshayFramework/node_modules/drizzle-kit/bin.cjs:66575:26)
+    at async pgPush (/home/kali/Tools/AkshayFramework/node_modules/drizzle-kit/bin.cjs:70117:13)
+    at async Object.handler (/home/kali/Tools/AkshayFramework/node_modules/drizzle-kit/bin.cjs:79124:9)
+    at async run (/home/kali/Tools/AkshayFramework/node_modules/drizzle-kit/bin.cjs:78381:7) {
+  length: 99,
+  severity: 'ERROR',
+  code: '42501',
+  detail: undefined,
+  hint: undefined,
+  position: '14',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'aclchk.c',
+  line: '2843',
+  routine: 'aclcheck_error'
+}
+[SUCCESS] Database setup completed
+[STEP] Creating workspace directory...
+[SUCCESS] Workspace directory created at /tmp/akshay-framework-workspace
+[STEP] Creating startup script...
+[SUCCESS] Startup script created
+[STEP] Creating desktop launcher...
+[SUCCESS] Desktop launcher created
+[STEP] Completing final setup...
+[SUCCESS] Final setup completed
+
+╔═══════════════════════════════════════════════════════════╗
+║                                                           ║
+║            🎉 INSTALLATION COMPLETED! 🎉                  ║
+║                                                           ║
+║              Akshay's Framework is ready!                 ║
+║                                                           ║
+╚═══════════════════════════════════════════════════════════╝
+
+📍 Installation Location: /home/kali/akshay-framework
+🌐 Access URL: http://localhost:3000
+
+🚀 To start the framework:
+   Method 1: Double-click the desktop launcher
+   Method 2: Run command: akshay-framework
+   Method 3: cd /home/kali/akshay-framework && ./start-framework.sh
+
+📋 Quick Commands:
+   akshay-framework     - Start the framework
+   framework-start      - Alternative start command
+
+📚 Features Available:
+   ✅ 24+ Security Tools Integrated
+   ✅ Real-time Reconnaissance Monitoring
+   ✅ Vulnerability Analysis Dashboard
+   ✅ Professional Reporting System
+   ✅ File Management & Downloads
+
+💡 Pro Tip: Source your bashrc to use the new commands:
+   source ~/.bashrc
+
+⚠  Important: Add your API keys to ~/.env for enhanced functionality
+
+[SUCCESS] Installation completed successfully!
+
+Would you like to start Akshay's Framework now? (y/N): y
+[INFO] Starting Akshay's Framework...
+🔍 Starting Akshay's Framework...
+📁 Application Directory: /home/kali/akshay-framework
+🌐 Server will be available at: http://localhost:3000
+
+Installing Node.js dependencies...
+npm error code ENOENT
+npm error syscall open
+npm error path /home/kali/akshay-framework/package.json
+npm error errno -2
+npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open '/home/kali/akshay-framework/package.json'
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error A complete log of this run can be found in: /home/kali/.npm/_logs/2025-08-10T10_23_22_691Z-debug-0.log
+Starting the server...
+npm error code ENOENT
+npm error syscall open
+npm error path /home/kali/akshay-framework/package.json
+npm error errno -2
+npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open '/home/kali/akshay-framework/package.json'
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error A complete log of this run can be found in: /home/kali/.npm/_logs/2025-08-10T10_23_22_979Z-debug-0.log
+                                                                                                
+┌──(kali㉿kali)-[~/Tools/AkshayFramework]
+└─$ apt-get install nodejs -y
+E: Could not open lock file /var/lib/dpkg/lock-frontend - open (13: Permission denied)
+E: Unable to acquire the dpkg frontend lock (/var/lib/dpkg/lock-frontend), are you root?
+                                                                                                
+┌──(kali㉿kali)-[~/Tools/AkshayFramework]
+└─$ sudo apt-get install nodejs -y
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+nodejs is already the newest version (20.19.4-1nodesource1).
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+                                                                                                
+┌──(kali㉿kali)-[~/Tools/AkshayFramework]
+└─$ sudo apt remove nodejs                                                  
+REMOVING:                       
+  beef-xss  nodejs
+                                                                                                
+Summary:
+  Upgrading: 0, Installing: 0, Removing: 2, Not Upgrading: 0
+  Freed space: 285 MB
+
+Continue? [Y/n] y
+(Reading database ... 483399 files and directories currently installed.)
+Removing beef-xss (0.5.4.0+git20250422-0kali1) ...
+Removing nodejs (20.19.4-1nodesource1) ...
+Processing triggers for man-db (2.13.1-1) ...
+Processing triggers for kali-menu (2025.3.0) ...
+                                                                                                
+┌──(kali㉿kali)-[~/Tools/AkshayFramework]
+└─$ sudo apt-get install nodejs -y
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following NEW packages will be installed:
+  nodejs
+0 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.
+Need to get 32.0 MB of archives.
+After this operation, 199 MB of additional disk space will be used.
+Get:1 https://deb.nodesource.com/node_20.x nodistro/main amd64 nodejs amd64 20.19.4-1nodesource1 [32.0 MB]
+Fetched 32.0 MB in 6s (5,755 kB/s) 
+Selecting previously unselected package nodejs.
+(Reading database ... 468976 files and directories currently installed.)
+Preparing to unpack .../nodejs_20.19.4-1nodesource1_amd64.deb ...
+Unpacking nodejs (20.19.4-1nodesource1) ...
+Setting up nodejs (20.19.4-1nodesource1) ...
+Processing triggers for kali-menu (2025.3.0) ...
+Processing triggers for man-db (2.13.1-1) ...
+Scanning processes...                                                                           
+Scanning linux images...                                                                        
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+                                                                                                
+┌──(kali㉿kali)-[~/Tools/AkshayFramework]
+└─$ sudo apt-get install beef-xss -y
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following NEW packages will be installed:
+  beef-xss
+0 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.
+Need to get 21.1 MB of archives.
+After this operation, 85.4 MB of additional disk space will be used.
+Get:1 http://http.kali.org/kali kali-rolling/main amd64 beef-xss amd64 0.5.4.0+git20250422-0kali1 [21.1 MB]
+Fetched 21.1 MB in 5s (4,130 kB/s)   
+Selecting previously unselected package beef-xss.
+(Reading database ... 474339 files and directories currently installed.)
+Preparing to unpack .../beef-xss_0.5.4.0+git20250422-0kali1_amd64.deb ...
+Unpacking beef-xss (0.5.4.0+git20250422-0kali1) ...
+Setting up beef-xss (0.5.4.0+git20250422-0kali1) ...
+beef-xss.service is a disabled or a static unit not running, not starting it.
+Processing triggers for kali-menu (2025.3.0) ...
+Scanning processes...                                                                           
+Scanning linux images...                                                                        
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+                                                                                                
+┌──(kali㉿kali)-[~/Tools/AkshayFramework]
+└─$ ls
+attached_assets    install.sh         postcss.config.js  server              tsconfig.json
+client             kali-config.sh     QUICK-FIX.sh       shared              vite.config.ts
+components.json    node_modules       QUICK-START.md     start-framework.sh  workspace
+demo-tools.sh      package.json       README-KALI.md     tailwind.config.ts
+drizzle.config.ts  package-lock.json  replit.md          TROUBLESHOOTING.md
+                                                                                                
+┌──(kali㉿kali)-[~/Tools/AkshayFramework]
+└─$ ./kali-config.sh 
+🔧 Configuring Akshay's Framework for Kali Linux...
+[CONFIG] Configuring Kali Linux tool paths...
+[SUCCESS] Tool paths configured
+[CONFIG] Setting up systemd service...
+[SUCCESS] Systemd service created
+[WARNING] To enable auto-start: sudo systemctl enable akshay-framework
+[CONFIG] Configuring firewall rules...
+sudo: ufw: command not found
+                                                                                                
+┌──(kali㉿kali)-[~/Tools/AkshayFramework]
+└─$ chmod +x kali-config.sh         
+                                                                                                
+┌──(kali㉿kali)-[~/Tools/AkshayFramework]
+└─$ ./kali-config.sh       
+🔧 Configuring Akshay's Framework for Kali Linux...
+[CONFIG] Configuring Kali Linux tool paths...
+[SUCCESS] Tool paths configured
+[CONFIG] Setting up systemd service...
+[SUCCESS] Systemd service created
+[WARNING] To enable auto-start: sudo systemctl enable akshay-framework
+[CONFIG] Configuring firewall rules...
+sudo: ufw: command not found
+                                                                                                
+┌──(kali㉿kali)-[~/Tools/AkshayFramework]
+└─$ ./QUICK-FIX.sh  
+🔧 AKSHAY'S FRAMEWORK - QUICK FIX
+=================================
+Installing Python tools using pipx...
+pipx is already the newest version (1.7.1-1).
+python3-venv is already the newest version (3.13.5-1).
+Summary:
+  Upgrading: 0, Installing: 0, Removing: 0, Not Upgrading: 0
+/home/kali/.local/bin is already in PATH.
+
+⚠  All pipx binary directories have been appended to PATH. If you are sure you want to
+proceed, try again with the '--force' flag.
+
+Otherwise pipx is ready to go! ✨ 🌟 ✨
+'arjun' already seems to be installed. Not modifying existing installation in
+'/home/kali/.local/share/pipx/venvs/arjun'. Pass '--force' to force installation.
+'dirsearch' already seems to be installed. Not modifying existing installation in
+'/home/kali/.local/share/pipx/venvs/dirsearch'. Pass '--force' to force installation.
+Installing Kali repository tools...
+sublist3r is already the newest version (1.1-4).
+sqlmap is already the newest version (1.9.6-1).
+Summary:
+  Upgrading: 0, Installing: 0, Removing: 0, Not Upgrading: 0
+Installing Node.js dependencies...
+
+up to date, audited 482 packages in 2s
+
+64 packages are looking for funding
+  run `npm fund` for details
+
+11 vulnerabilities (3 low, 8 moderate)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+✅ Node.js dependencies installed
+🚀 Starting the framework...
+The application will be available at: http://localhost:5000
+
+If port 5000 is busy, kill existing processes:
+sudo lsof -ti:5000 | xargs kill -9
+
+
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+6:25:58 AM [express] serving on port 5000
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+6:26:13 AM [express] GET /api/targets 200 in 2ms :: []
+6:26:13 AM [express] GET /api/tools 200 in 0ms :: [{"id":"subfinder","name":"Subfinder","stage":1,"i…
+6:26:17 AM [express] GET /api/targets 200 in 0ms :: []
+6:26:17 AM [express] GET /api/tools 200 in 1ms :: [{"id":"subfinder","name":"Subfinder","stage":1,"i…
+6:26:22 AM [express] POST /api/targets 200 in 2ms :: {"name":"dvwa","inputType":"single","domain":"d…
+6:26:22 AM [express] GET /api/targets 200 in 1ms :: [{"name":"dvwa","inputType":"single","domain":"d…
+6:26:31 AM [express] GET /api/executions/4d2a0a4d-1936-48aa-aa91-58f39a1eed9b 200 in 1ms :: []
+6:26:31 AM [express] GET /api/vulnerabilities/4d2a0a4d-1936-48aa-aa91-58f39a1eed9b 200 in 0ms :: []
+6:26:31 AM [express] GET /api/files/4d2a0a4d-1936-48aa-aa91-58f39a1eed9b 200 in 0ms :: []
+
