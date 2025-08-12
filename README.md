@@ -23,7 +23,7 @@ chmod +x QUICK-FIX.sh
 
 ```bash
 # Download and run the installer
-curl -sSL https://raw.githubusercontent.com/your-repo/akshay-framework/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/OffSecSamurai/MyFramework/AkshayFramework/install.sh | bash
 
 # Or if you have the files locally:
 chmod +x install.sh
@@ -113,7 +113,7 @@ cd ~/akshay-framework
 
 Open your browser and navigate to:
 ```
-http://localhost:3000
+http://localhost:5000
 ```
 
 ### Basic Workflow
@@ -183,7 +183,7 @@ Tools can be configured in the web interface or by modifying the tool definition
 
 1. **Port already in use:**
    ```bash
-   sudo netstat -tulpn | grep :3000
+   sudo netstat -tulpn | grep :5000
    sudo kill -9 <PID>
    ```
 
