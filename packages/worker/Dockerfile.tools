@@ -1,0 +1,97 @@
+# Use Ubuntu as base for better tool compatibility
+FROM ubuntu:22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PATH="/usr/local/go/bin:$PATH"
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    python3 \
+    python3-pip \
+    python3-venv \
+    golang-go \
+    build-essential \
+    unzip \
+    jq \
+    nmap \
+    nikto \
+    sqlmap \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Go tools
+RUN go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
+    go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest && \
+    go install github.com/projectdiscovery/httpx/cmd/httpx@latest && \
+    go install github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest && \
+    go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest && \
+    go install github.com/tomnomnom/assetfinder@latest && \
+    go install github.com/tomnomnom/waybackurls@latest && \
+    go install github.com/lc/gau/v2/cmd/gau@latest && \
+    go install github.com/projectdiscovery/katana/cmd/katana@latest && \
+    go install github.com/projectdiscovery/chaos-client/cmd/chaos@latest && \
+    go install github.com/ffuf/ffuf@latest && \
+    go install github.com/OJ/gobuster/v3@latest
+
+# Install Python tools
+RUN pip3 install --no-cache-dir \
+    arjun \
+    paramspider \
+    gitleaks \
+    s3scanner
+
+# Install Findomain
+RUN curl -LO https://github.com/findomain/findomain/releases/latest/download/findomain-linux && \
+    chmod +x findomain-linux && \
+    mv findomain-linux /usr/local/bin/findomain
+
+# Install Amass
+RUN curl -LO https://github.com/owasp-amass/amass/releases/latest/download/amass_linux_amd64.zip && \
+    unzip amass_linux_amd64.zip && \
+    mv amass_linux_amd64/amass /usr/local/bin/ && \
+    rm -rf amass_linux_amd64*
+
+# Install Aquatone
+RUN curl -LO https://github.com/michenriksen/aquatone/releases/latest/download/aquatone_linux_amd64_1.7.0.zip && \
+    unzip aquatone_linux_amd64_1.7.0.zip && \
+    mv aquatone /usr/local/bin/ && \
+    rm aquatone_linux_amd64_1.7.0.zip
+
+# Install Arjun
+RUN git clone https://github.com/s0md3v/Arjun.git /opt/arjun && \
+    cd /opt/arjun && \
+    python3 setup.py install
+
+# Install ParamSpider
+RUN git clone https://github.com/devanshbatham/ParamSpider.git /opt/paramspider && \
+    cd /opt/paramspider && \
+    pip3 install -r requirements.txt
+
+# Install Gitleaks
+RUN curl -sSfL https://raw.githubusercontent.com/zricethezav/gitleaks/master/install.sh | sh -s -- -b /usr/local/bin
+
+# Install S3Scanner
+RUN git clone https://github.com/sa7mon/S3Scanner.git /opt/s3scanner && \
+    cd /opt/s3scanner && \
+    pip3 install -r requirements.txt
+
+# Create tools directory
+WORKDIR /app/tools
+
+# Create symlinks for easy access
+RUN ln -sf /root/go/bin/* /usr/local/bin/
+
+# Create non-root user
+RUN useradd -m -s /bin/bash tools
+
+# Change ownership
+RUN chown -R tools:tools /app
+
+# Switch to non-root user
+USER tools
+
+# Keep container running
+CMD ["tail", "-f", "/dev/null"]

@@ -1,0 +1,45 @@
+{
+  "name": "akshays-framework",
+  "version": "1.0.0",
+  "description": "A comprehensive reconnaissance and vulnerability testing framework",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\" \"npm run dev:worker\"",
+    "dev:api": "cd packages/api && npm run dev",
+    "dev:web": "cd packages/web && npm run dev",
+    "dev:worker": "cd packages/worker && npm run dev",
+    "build": "npm run build:api && npm run build:web && npm run build:worker",
+    "build:api": "cd packages/api && npm run build",
+    "build:web": "cd packages/web && npm run build",
+    "build:worker": "cd packages/worker && npm run build",
+    "start": "docker-compose up -d",
+    "stop": "docker-compose down",
+    "setup": "npm run setup:db && npm run build",
+    "setup:db": "cd packages/api && npx prisma generate && npx prisma db push",
+    "db:migrate": "cd packages/api && npx prisma migrate dev",
+    "db:reset": "cd packages/api && npx prisma migrate reset",
+    "db:studio": "cd packages/api && npx prisma studio",
+    "install:all": "npm install && npm run install:packages",
+    "install:packages": "cd packages/api && npm install && cd ../web && npm install && cd ../worker && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prisma": "^5.7.1"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "reconnaissance",
+    "vulnerability-scanning",
+    "security",
+    "bug-bounty",
+    "pentesting"
+  ],
+  "author": "Akshay",
+  "license": "MIT"
+}
